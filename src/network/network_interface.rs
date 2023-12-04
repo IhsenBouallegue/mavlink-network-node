@@ -1,5 +1,3 @@
-// network/network_interface.rs
-
 use crate::driver::abstract_driver::Driver;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
