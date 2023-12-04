@@ -16,7 +16,8 @@ pub fn create_mavlink() -> MavDevice {
 
 /// Create mavlink connection from groundstation
 pub fn create_groundstation_mavlink() -> MavDevice {
-    let mut mavconn = mavlink::connect::<MavMessage>(format!("udpin:{}:{}", "0.0.0.0", "14530").as_str()).unwrap();
+    let mut mavconn =
+        mavlink::connect::<MavMessage>(format!("udpout:{}:{}", GROUNDSATION_IP, QGROUNDCONTROL_PORT).as_str()).unwrap();
     mavconn.set_protocol_version(mavlink::MavlinkVersion::V2);
     mavconn
 }
