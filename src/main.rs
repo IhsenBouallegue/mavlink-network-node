@@ -1,5 +1,6 @@
 mod driver;
 mod network;
+mod utils;
 
 use driver::lora_driver::LoRaDriver;
 use driver::udp_driver::UDPDriver;

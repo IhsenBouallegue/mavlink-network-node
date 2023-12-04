@@ -6,5 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+linux-embedded-hal = "0.3.2"
 mavlink = "0.12.2"
 sx127x_lora = "0.3.1"
+rppal = { git = "https://github.com/golemparts/rppal.git", features = [
+    "hal",
+], rev = "c237b481bf763f76b10328dfbd4edf543e9907f6" }
