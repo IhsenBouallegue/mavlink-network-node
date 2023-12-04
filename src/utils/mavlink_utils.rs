@@ -1,7 +1,8 @@
+use ansi_term::Color;
 use mavlink::{ardupilotmega::MavMessage, MavFrame};
 use std::sync::Arc;
 
-use super::types::MavFramePacket;
+use super::types::{MavDevice, MavFramePacket};
 
 const GROUNDSATION_IP: &str = "192.168.1.150";
 const QGROUNDCONTROL_PORT: &str = "14550";
@@ -34,15 +35,13 @@ pub fn create_mavlink() -> Arc<Box<dyn mavlink::MavConnection<MavMessage> + Send
 }
 
 /// Create mavlink connection from gateway to groundstation
-pub fn create_groundstation_mavlink(
-) -> Arc<Box<dyn mavlink::MavConnection<MavMessage> + Send + Sync>> {
+pub fn create_groundstation_mavlink() -> MavDevice {
     let mavconn = mavlink::connect::<MavMessage>(
         format!("udpout:{}:{}", GROUNDSATION_IP, QGROUNDCONTROL_PORT).as_str(),
     )
     .unwrap();
-    let groundstation = Arc::new(mavconn);
 
-    groundstation
+    mavconn
 }
 
 /// Create mavlink connection from groundstation to gateway
@@ -91,4 +90,18 @@ pub fn deserialize_frame(buffer: &[u8; 255]) -> MavFramePacket {
     let mavlink_frame: MavFramePacket = MavFramePacket::deser(mavlink::MavlinkVersion::V2, buffer)
         .expect("Failed to deserialize mavlink frame");
     mavlink_frame
+}
+
+pub fn mavlink_receive_blcoking(mavlink_device: MavDevice) -> MavFramePacket {
+    println!("{}", Color::Cyan.paint("Mavlink receiving started..."));
+    let mavlink_frame = mavlink_device
+        .recv_frame()
+        .expect("Failed to receive mavlink frame");
+    mavlink_frame
+}
+
+pub fn mavlink_send(mavlink_device: &MavDevice, mavlink_frame: &MavFramePacket) {
+    mavlink_device
+        .send_frame(&mavlink_frame)
+        .expect("Failed to send mavlink frame");
 }

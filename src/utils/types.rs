@@ -8,5 +8,6 @@ use sx127x_lora::LoRa;
 
 pub type LoRaDevice = LoRa<Spi, OutputPin, OutputPin, Delay>;
 
-pub type MavDevice = dyn MavConnection<MavMessage>;
+pub type MavDevice = Box<dyn MavConnection<MavMessage> + Send + Sync>;
+
 pub type MavFramePacket = MavFrame<MavMessage>;
