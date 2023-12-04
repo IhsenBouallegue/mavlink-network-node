@@ -1,5 +1,7 @@
 use super::abstract_driver::Driver;
-use crate::utils::mavlink_utils::{create_groundstation_mavlink, mavlink_send};
+use crate::utils::mavlink_utils::{
+    create_groundstation_mavlink, mavlink_receive_blcoking, mavlink_send,
+};
 use crate::utils::types::{MavDevice, MavFramePacket};
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -18,9 +20,11 @@ impl Driver<MavFramePacket> for UDPDriver {
     }
 
     fn receive(&self, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
-        // let data = Default::default();
-        // let on_receive = on_receive.lock().unwrap();
-        // on_receive(data);
+        let mavlink = self.driver_instance.clone();
+        let mut mavlink = lora.write().unwrap();
+        let mavlink_frame: MavFramePacket = mavlink_receive_blcoking(&mavlink);
+        let on_receive = on_receive.lock().unwrap();
+        on_receive(mavlink_frame);
     }
 
     fn create_instance() -> Self {

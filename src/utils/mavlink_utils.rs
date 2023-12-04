@@ -92,7 +92,7 @@ pub fn deserialize_frame(buffer: &[u8; 255]) -> MavFramePacket {
     mavlink_frame
 }
 
-pub fn mavlink_receive_blcoking(mavlink_device: MavDevice) -> MavFramePacket {
+pub fn mavlink_receive_blcoking(mavlink_device: &MavDevice) -> MavFramePacket {
     println!("{}", Color::Cyan.paint("Mavlink receiving started..."));
     let mavlink_frame = mavlink_device
         .recv_frame()
