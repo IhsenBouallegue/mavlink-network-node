@@ -2,7 +2,7 @@ use crate::driver::abstract_driver::Driver;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-pub trait NetworkInterface<DriverType: Driver<PacketType> + Send + Sync, PacketType: Send> {
+pub trait NetworkInterface<DriverType: Driver<PacketType>, PacketType: Send> {
     fn new() -> Self;
     fn send(&self);
     fn prepare_to_send(&self, data: PacketType);
@@ -10,14 +10,14 @@ pub trait NetworkInterface<DriverType: Driver<PacketType> + Send + Sync, PacketT
     fn get_received(&self) -> PacketType;
 }
 
-pub struct GenericNetworkInterface<DriverType: Driver<PacketType> + Send + Sync, PacketType: Send> {
+pub struct GenericNetworkInterface<DriverType: Driver<PacketType>, PacketType: Send> {
     driver: Arc<DriverType>,
     to_send: Arc<Mutex<VecDeque<PacketType>>>,
     received: Arc<Mutex<VecDeque<PacketType>>>,
 }
 
-impl<DriverType: Driver<PacketType> + Send + Sync, PacketType: Send>
-    NetworkInterface<DriverType, PacketType> for GenericNetworkInterface<DriverType, PacketType>
+impl<DriverType: Driver<PacketType>, PacketType: Send> NetworkInterface<DriverType, PacketType>
+    for GenericNetworkInterface<DriverType, PacketType>
 {
     fn new() -> Self {
         let driver = Arc::new(DriverType::create_instance());

@@ -1,16 +1,13 @@
 extern crate sx127x_lora;
 
-use std::{error::Error, io};
-
+use super::types::{LoRaDevice, MavFramePacket};
 use ansi_term::Color;
 use rppal::{
-    gpio::{Gpio, OutputPin},
+    gpio::Gpio,
     hal::Delay,
     spi::{Bus, Mode, SlaveSelect, Spi},
 };
-use sx127x_lora::LoRa;
-
-use super::types::{LoRaDevice, PacketType};
+use std::error::Error;
 
 const LORA_CS_PIN: u8 = 25;
 const LORA_RESET_PIN: u8 = 17;
@@ -25,9 +22,9 @@ pub fn create_spi() -> Result<Spi, Box<dyn Error>> {
 
 pub fn create_lora(spi: Spi) -> Result<LoRaDevice, Box<dyn Error>> {
     let gpio = Gpio::new()?;
-    let mut nss = Gpio::new()?.get(LORA_CS_PIN)?.into_output();
+    let mut nss = gpio.get(LORA_CS_PIN)?.into_output();
     nss.set_high();
-    let mut reset = Gpio::new()?.get(LORA_RESET_PIN)?.into_output();
+    let mut reset = gpio.get(LORA_RESET_PIN)?.into_output();
     reset.set_high();
     // let mut dio1 = Gpio::new()?.get(LORA_DIO0_PIN)?.into_input();
     // let mut busy = Gpio::new()?.get(LORA_BUSY_PIN)?.into_input();
@@ -37,7 +34,7 @@ pub fn create_lora(spi: Spi) -> Result<LoRaDevice, Box<dyn Error>> {
     Ok(lora)
 }
 
-pub fn transmit(lora: &mut LoRaDevice, mavlink_frame: &PacketType) {
+pub fn transmit(lora: &mut LoRaDevice, mavlink_frame: &MavFramePacket) {
     let buffer: &mut [u8; 255] = &mut [0; 255];
     let length = mavlink_frame.ser(buffer);
     let transmit = lora.transmit_payload(*buffer, length);
@@ -51,4 +48,11 @@ pub fn transmit(lora: &mut LoRaDevice, mavlink_frame: &PacketType) {
         ),
         Err(error) => println!("{:?}", error),
     }
+}
+
+pub fn lora_receive(lora: &mut LoRaDevice) -> [u8; 255] {
+    println!("{}", Color::Yellow.paint("Receiving started..."));
+    let poll = lora.poll_irq(Some(30)).unwrap();
+    let buffer = lora.read_packet().unwrap();
+    buffer
 }

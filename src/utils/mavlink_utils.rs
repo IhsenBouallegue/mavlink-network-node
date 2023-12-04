@@ -1,6 +1,8 @@
 use mavlink::{ardupilotmega::MavMessage, MavFrame};
 use std::sync::Arc;
 
+use super::types::MavFramePacket;
+
 const GROUNDSATION_IP: &str = "192.168.1.150";
 const QGROUNDCONTROL_PORT: &str = "14550";
 
@@ -83,4 +85,10 @@ pub fn request_stream() -> MavMessage {
         message_id: 0,
         interval_us: 10000,
     })
+}
+
+pub fn deserialize_frame(buffer: &[u8; 255]) -> MavFramePacket {
+    let mavlink_frame: MavFramePacket = MavFramePacket::deser(mavlink::MavlinkVersion::V2, buffer)
+        .expect("Failed to deserialize mavlink frame");
+    mavlink_frame
 }
