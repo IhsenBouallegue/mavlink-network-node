@@ -1,5 +1,5 @@
 use ansi_term::Color;
-use mavlink::{ardupilotmega::MavMessage, MavFrame};
+use mavlink::{ardupilotmega::MavMessage, MavFrame, MavHeader};
 use std::sync::Arc;
 
 use super::types::{MavDevice, MavFramePacket};
@@ -11,27 +11,11 @@ const DRONE_IP: &str = "192.168.0.4";
 const DRONE_PORT: &str = "14540";
 
 /// Create mavlink connection from flight computer to compagnion computer
-pub fn create_mavlink() -> Arc<Box<dyn mavlink::MavConnection<MavMessage> + Send + Sync>> {
+pub fn create_mavlink() -> MavDevice {
     let mavconn =
         mavlink::connect::<MavMessage>(format!("udpout:{}:{}", DRONE_IP, DRONE_PORT).as_str())
             .unwrap();
-
-    let vehicle = Arc::new(mavconn);
-    vehicle
-        .send_frame(&MavFrame {
-            header: mavlink::MavHeader::default(),
-            msg: request_parameters(),
-            protocol_version: mavlink::MavlinkVersion::V2,
-        })
-        .unwrap();
-    vehicle
-        .send_frame(&MavFrame {
-            header: mavlink::MavHeader::default(),
-            msg: request_stream(),
-            protocol_version: mavlink::MavlinkVersion::V2,
-        })
-        .unwrap();
-    vehicle
+    mavconn
 }
 
 /// Create mavlink connection from gateway to groundstation
@@ -40,22 +24,16 @@ pub fn create_groundstation_mavlink() -> MavDevice {
         format!("udpout:{}:{}", GROUNDSATION_IP, QGROUNDCONTROL_PORT).as_str(),
     )
     .unwrap();
-
     mavconn
 }
 
 /// Create mavlink connection from groundstation to gateway
-pub fn create_incoming_groundstation_mavlink(
-) -> Arc<Box<dyn mavlink::MavConnection<MavMessage> + Send + Sync>> {
+pub fn create_incoming_groundstation_mavlink() -> MavDevice {
     let mut mavconn =
         mavlink::connect::<MavMessage>(format!("udpin:{}:{}", "0.0.0.0", "14530").as_str())
             .unwrap();
-    mavconn.set_protocol_version(mavlink::MavlinkVersion::V1);
-
-    // let msg = mavconn.recv().unwrap();
-    // println!("{:#?}", msg);
-    let groundstation = Arc::new(mavconn);
-    groundstation
+    mavconn.set_protocol_version(mavlink::MavlinkVersion::V2);
+    mavconn
 }
 
 /// Create a heartbeat message using 'ardupilotmega' dialect
@@ -101,7 +79,24 @@ pub fn mavlink_receive_blcoking(mavlink_device: &MavDevice) -> MavFramePacket {
 }
 
 pub fn mavlink_send(mavlink_device: &MavDevice, mavlink_frame: &MavFramePacket) {
+    println!("{}", Color::Cyan.paint("Mavlink sending started..."));
     mavlink_device
         .send_frame(&mavlink_frame)
         .expect("Failed to send mavlink frame");
+}
+
+pub fn create_mavlink_header() -> MavHeader {
+    mavlink::MavHeader {
+        sequence: 0,
+        system_id: 101,
+        component_id: 0,
+    }
+}
+
+pub fn create_mavlink_heartbeat_frame() -> MavFramePacket {
+    MavFramePacket {
+        header: create_mavlink_header(),
+        msg: heartbeat_message(),
+        protocol_version: mavlink::MavlinkVersion::V2,
+    }
 }

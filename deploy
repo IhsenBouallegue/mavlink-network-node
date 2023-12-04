@@ -9,7 +9,7 @@ readonly TARGET_ADDRESS=$1
 readonly NODE_TYPE=$2
 
 readonly TARGET_USER=node
-readonly PROJECT=mavlink-lora
+readonly PROJECT=mavlink-network-node
 readonly TARGET_HOST=${TARGET_USER}@${TARGET_ADDRESS}.local
 
 readonly TARGET_PATH=/home/${TARGET_USER}/${PROJECT}
