@@ -1,4 +1,4 @@
-use super::types::{MavDevice, MavFramePacket};
+use super::types::{MavDevice, MavFramePacket, NodeType};
 use ansi_term::Color;
 use mavlink::{ardupilotmega::MavMessage, MavHeader};
 
@@ -70,9 +70,15 @@ pub fn mavlink_send(mavlink_device: &MavDevice, mavlink_frame: &MavFramePacket) 
 }
 
 pub fn create_mavlink_header() -> MavHeader {
+    let node_type = NodeType::from_str(std::env::var("NODE_TYPE").unwrap().as_str()).unwrap();
+    let system_id = match node_type {
+        NodeType::Drone => 201,
+        NodeType::Gateway => 101,
+    };
+
     mavlink::MavHeader {
         sequence: 0,
-        system_id: 101,
+        system_id: system_id,
         component_id: 0,
     }
 }

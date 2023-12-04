@@ -3,6 +3,7 @@ mod network;
 mod utils;
 
 use std::env;
+use std::sync::Arc;
 use std::thread;
 
 use crate::utils::mavlink_utils::create_mavlink_heartbeat_frame;
@@ -20,11 +21,16 @@ fn main() {
     match node_type {
         NodeType::Drone => {
             let udp_network = GenericNetworkInterface::<UDPDriver, MavFramePacket>::new();
+            let udp_network = Arc::new(udp_network);
             let lora_network = GenericNetworkInterface::<LoRaDriver, MavFramePacket>::new();
+            let udp = udp_network.clone();
+            thread::spawn(move || loop {
+                udp.push_to_send_queue(create_mavlink_heartbeat_frame());
+                udp.send_all();
+                udp.receive();
+            });
+
             loop {
-                udp_network.push_to_send_queue(create_mavlink_heartbeat_frame());
-                udp_network.send_all();
-                udp_network.receive();
                 let mavlink_frame = udp_network.pop_received_queue();
                 if let Some(mavlink_frame) = mavlink_frame {
                     lora_network.push_to_send_queue(mavlink_frame);
@@ -36,12 +42,17 @@ fn main() {
                     udp_network.push_to_send_queue(mavlink_frame);
                     udp_network.send_all();
                 }
-                thread::sleep(std::time::Duration::from_millis(3000));
             }
         }
         NodeType::Gateway => {
             let udp_network = GenericNetworkInterface::<UDPDriver, MavFramePacket>::new();
+            let udp_network = Arc::new(udp_network);
             let lora_network = GenericNetworkInterface::<LoRaDriver, MavFramePacket>::new();
+            // spawn new thread that received from udp network
+            let udp = udp_network.clone();
+            thread::spawn(move || loop {
+                udp.receive();
+            });
             loop {
                 udp_network.push_to_send_queue(create_mavlink_heartbeat_frame());
                 udp_network.send_all();
@@ -49,18 +60,15 @@ fn main() {
                 lora_network.receive();
                 let mavlink_frame = lora_network.pop_received_queue();
                 if let Some(mavlink_frame) = mavlink_frame {
-                    println!("Received frame: {:#?}", mavlink_frame);
                     udp_network.push_to_send_queue(mavlink_frame);
                     udp_network.send_all();
                 }
-                print!("heelo");
-                udp_network.receive();
+
                 let mavlink_frame = udp_network.pop_received_queue();
                 if let Some(mavlink_frame) = mavlink_frame {
                     lora_network.push_to_send_queue(mavlink_frame);
                     lora_network.send_all();
                 }
-                thread::sleep(std::time::Duration::from_millis(3000));
             }
         }
     }

@@ -45,15 +45,14 @@ pub fn transmit(lora: &mut LoRaDevice, mavlink_frame: &MavFramePacket) {
 }
 
 pub fn lora_receive(lora: &mut LoRaDevice) -> Option<[u8; 255]> {
-    println!("{}", Color::Yellow.paint("Receiving started..."));
+    println!("{}", Color::Yellow.paint("LoRa Receiving started..."));
     let poll = lora.poll_irq(Some(30));
     match poll {
         Ok(_) => {
-            println!("{}", Color::White.italic().bold().paint("Receiving over long link..."),);
+            println!("{}", Color::White.italic().bold().paint("Receiving over long link!"),);
             return Some(lora.read_packet().unwrap());
         }
-        Err(error) => {
-            println!("{:?}", error);
+        Err(_) => {
             return None;
         }
     }

@@ -19,6 +19,8 @@ pub struct GenericNetworkInterface<DriverType: Driver<PacketType>, PacketType: S
 
 impl<DriverType: Driver<PacketType>, PacketType: Send> NetworkInterface<DriverType, PacketType>
     for GenericNetworkInterface<DriverType, PacketType>
+where
+    PacketType: std::fmt::Debug,
 {
     fn new() -> Self {
         let driver = Arc::new(DriverType::create_instance());
@@ -53,12 +55,15 @@ impl<DriverType: Driver<PacketType>, PacketType: Send> NetworkInterface<DriverTy
     fn receive(&self) {
         let received = self.received.clone();
         let driver = self.driver.clone();
-        let on_receive = Arc::new(Mutex::new(move |data| received.lock().unwrap().push_back(data)));
+        let on_receive = Arc::new(Mutex::new(move |data| {
+            received.lock().unwrap().push_back(data);
+            println!("Received data packet!");
+        }));
         driver.receive(on_receive);
     }
 
     fn pop_received_queue(&self) -> Option<PacketType> {
-        let received = self.received.lock().unwrap().pop_front();
-        received
+        let received_packet = self.received.lock().unwrap().pop_front();
+        received_packet
     }
 }
