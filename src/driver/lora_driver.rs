@@ -24,9 +24,14 @@ impl Driver<MavFramePacket> for LoRaDriver {
         let lora = self.driver_instance.clone();
         let mut lora = lora.write().unwrap();
         let buffer = lora_receive(&mut lora);
-        let mavlink_frame: MavFramePacket = deserialize_frame(&buffer);
-        let on_receive = on_receive.lock().unwrap();
-        on_receive(mavlink_frame);
+        match buffer {
+            Some(buffer) => {
+                let mavlink_frame: MavFramePacket = deserialize_frame(&buffer);
+                let on_receive = on_receive.lock().unwrap();
+                on_receive(mavlink_frame);
+            }
+            None => println!("No data received"),
+        }
     }
 
     fn create_instance() -> Self {

@@ -1,7 +1,6 @@
+use super::types::{MavDevice, MavFramePacket};
 use ansi_term::Color;
 use mavlink::{ardupilotmega::MavMessage, MavHeader};
-
-use super::types::{MavDevice, MavFramePacket};
 
 const GROUNDSATION_IP: &str = "192.168.1.150";
 const QGROUNDCONTROL_PORT: &str = "14550";
@@ -15,15 +14,8 @@ pub fn create_mavlink() -> MavDevice {
     mavconn
 }
 
-/// Create mavlink connection from gateway to groundstation
+/// Create mavlink connection from groundstation
 pub fn create_groundstation_mavlink() -> MavDevice {
-    let mavconn =
-        mavlink::connect::<MavMessage>(format!("udpout:{}:{}", GROUNDSATION_IP, QGROUNDCONTROL_PORT).as_str()).unwrap();
-    mavconn
-}
-
-/// Create mavlink connection from groundstation to gateway
-pub fn create_incoming_groundstation_mavlink() -> MavDevice {
     let mut mavconn = mavlink::connect::<MavMessage>(format!("udpin:{}:{}", "0.0.0.0", "14530").as_str()).unwrap();
     mavconn.set_protocol_version(mavlink::MavlinkVersion::V2);
     mavconn

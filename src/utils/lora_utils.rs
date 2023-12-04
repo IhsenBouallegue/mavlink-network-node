@@ -11,8 +11,8 @@ use std::error::Error;
 
 const LORA_CS_PIN: u8 = 25;
 const LORA_RESET_PIN: u8 = 17;
-const LORA_DIO0_PIN: u8 = 4;
-const LORA_BUSY_PIN: u8 = 11;
+// const LORA_DIO0_PIN: u8 = 4;
+// const LORA_BUSY_PIN: u8 = 11;
 const FREQUENCY: i64 = 868;
 
 pub fn create_spi() -> Result<Spi, Box<dyn Error>> {
@@ -39,33 +39,22 @@ pub fn transmit(lora: &mut LoRaDevice, mavlink_frame: &MavFramePacket) {
     let length = mavlink_frame.ser(buffer);
     let transmit = lora.transmit_payload(*buffer, length);
     match transmit {
-        Ok(_) => println!(
-            "{}",
-            Color::White
-                .italic()
-                .bold()
-                .paint("Sending over long link..."),
-        ),
+        Ok(_) => println!("{}", Color::White.italic().bold().paint("Sending over long link..."),),
         Err(error) => println!("{:?}", error),
     }
 }
 
-pub fn lora_receive(lora: &mut LoRaDevice) -> [u8; 255] {
+pub fn lora_receive(lora: &mut LoRaDevice) -> Option<[u8; 255]> {
     println!("{}", Color::Yellow.paint("Receiving started..."));
-    let mut buffer = [0; 255];
     let poll = lora.poll_irq(Some(30));
     match poll {
         Ok(_) => {
-            println!(
-                "{}",
-                Color::White
-                    .italic()
-                    .bold()
-                    .paint("Receiving over long link..."),
-            );
-            buffer = lora.read_packet().unwrap();
+            println!("{}", Color::White.italic().bold().paint("Receiving over long link..."),);
+            return Some(lora.read_packet().unwrap());
         }
-        Err(error) => println!("{:?}", error),
+        Err(error) => {
+            println!("{:?}", error);
+            return None;
+        }
     }
-    buffer
 }

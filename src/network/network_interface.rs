@@ -8,7 +8,7 @@ pub trait NetworkInterface<DriverType: Driver<PacketType>, PacketType: Send> {
     fn send_all(&self);
     fn push_to_send_queue(&self, data: PacketType);
     fn receive(&self);
-    fn pop_received_queue(&self) -> PacketType;
+    fn pop_received_queue(&self) -> Option<PacketType>;
 }
 
 pub struct GenericNetworkInterface<DriverType: Driver<PacketType>, PacketType: Send> {
@@ -57,7 +57,10 @@ impl<DriverType: Driver<PacketType>, PacketType: Send> NetworkInterface<DriverTy
         driver.receive(on_receive);
     }
 
-    fn pop_received_queue(&self) -> PacketType {
-        self.received.lock().unwrap().pop_front().unwrap()
+    fn pop_received_queue(&self) -> Option<PacketType> {
+        println!("Packets Remaining: {}", self.received.lock().unwrap().len());
+        let received = self.received.lock().unwrap().pop_front();
+        println!("Packets Remaining: {}", self.received.lock().unwrap().len());
+        received
     }
 }

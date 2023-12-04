@@ -1,8 +1,5 @@
 use super::abstract_driver::Driver;
-use crate::utils::mavlink_utils::{
-    create_groundstation_mavlink, create_incoming_groundstation_mavlink, create_mavlink,
-    mavlink_receive_blcoking, mavlink_send,
-};
+use crate::utils::mavlink_utils::{create_groundstation_mavlink, mavlink_receive_blcoking, mavlink_send};
 use crate::utils::types::{MavDevice, MavFramePacket};
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -31,7 +28,7 @@ impl Driver<MavFramePacket> for UDPDriver {
     fn create_instance() -> Self {
         // let mavlink = create_groundstation_mavlink();
         // let mavlink = create_mavlink();
-        let mavlink = create_incoming_groundstation_mavlink();
+        let mavlink = create_groundstation_mavlink();
         Self {
             driver_instance: Arc::new(RwLock::new(mavlink)),
         }
