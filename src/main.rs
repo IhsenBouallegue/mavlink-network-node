@@ -1,8 +1,10 @@
 mod driver;
 mod network;
 
-use driver::{lora_driver::LoRaDriver, udp_driver::UDPDriver};
-use network::network_interface::{GenericNetworkInterface, NetworkInterface};
+use driver::lora_driver::LoRaDriver;
+use driver::udp_driver::UDPDriver;
+use network::network_interface::GenericNetworkInterface;
+use network::network_interface::NetworkInterface;
 
 fn main() {
     let udp_network = GenericNetworkInterface::<UDPDriver, i32>::new();
