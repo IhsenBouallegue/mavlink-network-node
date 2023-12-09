@@ -1,7 +1,6 @@
 use super::abstract_driver::Driver;
 use crate::utils::lora_utils::transmit;
 use crate::utils::lora_utils::{create_lora, create_spi, lora_receive};
-use crate::utils::mavlink_utils::deserialize_frame;
 use crate::utils::types::LoRaDevice;
 use crate::utils::types::MavFramePacket;
 use std::sync::{Arc, Mutex, RwLock};
@@ -23,15 +22,7 @@ impl Driver<MavFramePacket> for LoRaDriver {
     fn receive(&self, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
         let lora = self.driver_instance.clone();
         let mut lora = lora.write().unwrap();
-        let buffer = lora_receive(&mut lora);
-        match buffer {
-            Some(buffer) => {
-                let mavlink_frame: MavFramePacket = deserialize_frame(&buffer);
-                let on_receive = on_receive.lock().unwrap();
-                on_receive(mavlink_frame);
-            }
-            None => println!("No data received"),
-        }
+        lora_receive(&mut lora, on_receive);
     }
 
     fn create_instance() -> Self {

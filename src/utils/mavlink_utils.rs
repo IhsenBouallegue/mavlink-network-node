@@ -37,33 +37,41 @@ pub fn heartbeat_message() -> MavMessage {
 /// Create a message requesting the parameters list
 pub fn request_parameters() -> MavMessage {
     MavMessage::PARAM_REQUEST_LIST(mavlink::ardupilotmega::PARAM_REQUEST_LIST_DATA {
-        target_system: 0,
-        target_component: 0,
+        target_system: 1,
+        target_component: 1,
     })
 }
 
 /// Create a message enabling data streaming
 pub fn request_stream() -> MavMessage {
-    MavMessage::MESSAGE_INTERVAL(mavlink::ardupilotmega::MESSAGE_INTERVAL_DATA {
-        message_id: 0,
-        interval_us: 10000,
+    mavlink::ardupilotmega::MavMessage::REQUEST_DATA_STREAM(mavlink::ardupilotmega::REQUEST_DATA_STREAM_DATA {
+        target_system: 0,
+        target_component: 0,
+        req_stream_id: 0,
+        req_message_rate: 10,
+        start_stop: 1,
     })
 }
 
-pub fn deserialize_frame(buffer: &[u8; 255]) -> MavFramePacket {
-    let mavlink_frame: MavFramePacket =
-        MavFramePacket::deser(mavlink::MavlinkVersion::V2, buffer).expect("Failed to deserialize mavlink frame");
-    mavlink_frame
+pub fn deserialize_frame(buffer: &[u8; 255]) -> Option<MavFramePacket> {
+    let mavlink_frame_result = MavFramePacket::deser(mavlink::MavlinkVersion::V2, buffer);
+    match mavlink_frame_result {
+        Ok(mavlink_frame) => Some(mavlink_frame),
+        Err(_) => {
+            println!("Failed to deserialize mavlink frame: {:?}", buffer);
+            None
+        }
+    }
 }
 
 pub fn mavlink_receive_blcoking(mavlink_device: &MavDevice) -> MavFramePacket {
-    println!("{}", Color::Cyan.paint("Mavlink receiving started..."));
     let mavlink_frame = mavlink_device.recv_frame().expect("Failed to receive mavlink frame");
+    println!("{}", Color::Cyan.paint("<< Receiving frame over UDP"));
     mavlink_frame
 }
 
 pub fn mavlink_send(mavlink_device: &MavDevice, mavlink_frame: &MavFramePacket) {
-    println!("{}", Color::Cyan.paint("Mavlink sending started..."));
+    println!("{}", Color::Cyan.paint(">> Sending frame over UDP"));
     mavlink_device
         .send_frame(&mavlink_frame)
         .expect("Failed to send mavlink frame");

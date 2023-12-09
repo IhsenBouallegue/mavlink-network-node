@@ -42,7 +42,13 @@ where
     }
 
     fn send_all(&self) {
+        let packets_to_send = self.to_send.lock().unwrap().len();
         while !self.to_send.lock().unwrap().is_empty() {
+            println!(
+                "Sending {}/{} packets",
+                packets_to_send - self.to_send.lock().unwrap().len() + 1,
+                packets_to_send
+            );
             self.send_one();
         }
     }
@@ -57,7 +63,6 @@ where
         let driver = self.driver.clone();
         let on_receive = Arc::new(Mutex::new(move |data| {
             received.lock().unwrap().push_back(data);
-            println!("Received data packet!");
         }));
         driver.receive(on_receive);
     }

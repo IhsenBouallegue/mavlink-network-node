@@ -1,5 +1,7 @@
 extern crate sx127x_lora;
 
+use crate::utils::mavlink_utils::deserialize_frame;
+
 use super::types::{LoRaDevice, MavFramePacket};
 use ansi_term::Color;
 use rppal::{
@@ -7,7 +9,10 @@ use rppal::{
     hal::Delay,
     spi::{Bus, Mode, SlaveSelect, Spi},
 };
-use std::error::Error;
+use std::{
+    error::Error,
+    sync::{Arc, Mutex},
+};
 
 const LORA_CS_PIN: u8 = 25;
 const LORA_RESET_PIN: u8 = 17;
@@ -39,21 +44,36 @@ pub fn transmit(lora: &mut LoRaDevice, mavlink_frame: &MavFramePacket) {
     let length = mavlink_frame.ser(buffer);
     let transmit = lora.transmit_payload(*buffer, length);
     match transmit {
-        Ok(_) => println!("{}", Color::White.italic().bold().paint("Sending over long link..."),),
+        Ok(_) => {
+            println!(
+                "{}",
+                Color::Yellow.italic().bold().paint(">> Sending over long link..."),
+            );
+        }
         Err(error) => println!("{:?}", error),
     }
 }
 
-pub fn lora_receive(lora: &mut LoRaDevice) -> Option<[u8; 255]> {
-    println!("{}", Color::Yellow.paint("LoRa Receiving started..."));
-    let poll = lora.poll_irq(Some(30));
+pub fn lora_receive(lora: &mut LoRaDevice, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
+    print!(".");
+    let poll = lora.poll_irq(None);
+
     match poll {
         Ok(_) => {
-            println!("{}", Color::White.italic().bold().paint("Receiving over long link!"),);
-            return Some(lora.read_packet().unwrap());
+            println!(
+                "{}",
+                Color::Yellow.italic().bold().paint("<< Receiving over long link!"),
+            );
+            let buffer = lora.read_packet().unwrap();
+            let mavlink_frame = deserialize_frame(&buffer);
+            match mavlink_frame {
+                Some(mavlink_frame) => {
+                    let on_receive = on_receive.lock().unwrap();
+                    on_receive(mavlink_frame);
+                }
+                None => {}
+            }
         }
-        Err(_) => {
-            return None;
-        }
+        Err(_) => {}
     }
 }
