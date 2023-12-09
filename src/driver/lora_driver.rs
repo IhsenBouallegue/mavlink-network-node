@@ -3,8 +3,8 @@ use crate::utils::lora_utils::transmit;
 use crate::utils::lora_utils::{create_lora, create_spi, lora_receive};
 use crate::utils::types::LoRaDevice;
 use crate::utils::types::MavFramePacket;
+use futures::executor::block_on;
 use std::sync::{Arc, Mutex, RwLock};
-
 pub struct LoRaDriver {
     pub driver_instance: Arc<RwLock<LoRaDevice>>,
 }
@@ -15,19 +15,20 @@ impl Driver<MavFramePacket> for LoRaDriver {
         let lora = self.driver_instance.clone();
         let mut lora = lora.write().unwrap();
         if let Some(data) = get_packet_to_send() {
-            transmit(&mut lora, &data);
+            block_on(transmit(&mut lora, &data));
         }
     }
 
     fn receive(&self, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
         let lora = self.driver_instance.clone();
         let mut lora = lora.write().unwrap();
-        lora_receive(&mut lora, on_receive);
+        let mavlink_frame = block_on(lora_receive(&mut lora)).unwrap();
+        on_receive.lock().unwrap()(mavlink_frame);
     }
 
     fn create_instance() -> Self {
         let spi = create_spi().unwrap();
-        let lora = create_lora(spi).unwrap();
+        let lora = block_on(create_lora(spi)).expect("Failed to create LoRa instance");
         Self {
             driver_instance: Arc::new(RwLock::new(lora)),
         }
