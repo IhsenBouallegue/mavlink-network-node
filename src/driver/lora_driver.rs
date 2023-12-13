@@ -19,10 +19,15 @@ impl Driver<MavFramePacket> for LoRaDriver {
         }
     }
 
-    fn receive(&self, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
+    async fn receive(&self, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
         let lora = self.driver_instance.clone();
         let mut lora = lora.write().unwrap();
-        let mavlink_frame = block_on(lora_receive(&mut lora)).unwrap();
+        let mavlink_frame = lora_receive(&mut lora).await;
+        let mavlink_frame = match mavlink_frame {
+            Some(mavlink_frame) => mavlink_frame,
+            None => return,
+        };
+        println!("Received: {:?}", mavlink_frame);
         on_receive.lock().unwrap()(mavlink_frame);
     }
 

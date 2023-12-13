@@ -16,6 +16,6 @@ readonly TARGET_PATH=/home/${TARGET_USER}/${PROJECT}
 readonly TARGET_ARCH=aarch64-unknown-linux-gnu
 readonly SOURCE_PATH=./target/${TARGET_ARCH}/release/${PROJECT}
 
-cargo build --release --target=${TARGET_ARCH}
+cargo build --release
 rsync ${SOURCE_PATH} ${TARGET_HOST}:${TARGET_PATH}
 ssh -t ${TARGET_HOST} ${TARGET_PATH} ${NODE_TYPE}

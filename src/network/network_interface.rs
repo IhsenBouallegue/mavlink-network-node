@@ -7,7 +7,7 @@ pub trait NetworkInterface<DriverType: Driver<PacketType>, PacketType: Send> {
     fn send_one(&self);
     fn send_all(&self);
     fn push_to_send_queue(&self, data: PacketType);
-    fn receive(&self);
+    async fn receive(&self);
     fn pop_received_queue(&self) -> Option<PacketType>;
 }
 
@@ -58,13 +58,13 @@ where
         to_send.push_back(data);
     }
 
-    fn receive(&self) {
+    async fn receive(&self) {
         let received = self.received.clone();
         let driver = self.driver.clone();
         let on_receive = Arc::new(Mutex::new(move |data| {
             received.lock().unwrap().push_back(data);
         }));
-        driver.receive(on_receive);
+        driver.receive(on_receive).await;
     }
 
     fn pop_received_queue(&self) -> Option<PacketType> {

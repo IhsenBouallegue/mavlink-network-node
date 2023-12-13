@@ -73,7 +73,7 @@ pub async fn transmit(lora: &mut LoRaDevice, mavlink_frame: &MavFramePacket) {
         }
     };
 
-    match lora.prepare_for_tx(&mdltn_params, 20, false).await {
+    match lora.prepare_for_tx(&mdltn_params, 15, false).await {
         Ok(()) => {}
         Err(err) => {
             println!("Radio error = {:?}", err);
@@ -83,10 +83,7 @@ pub async fn transmit(lora: &mut LoRaDevice, mavlink_frame: &MavFramePacket) {
 
     match lora.tx(&mdltn_params, &mut tx_pkt_params, buffer, 100).await {
         Ok(()) => {
-            println!(
-                "{}",
-                Color::Yellow.italic().bold().paint(">> Sending over long link..."),
-            );
+            println!("{}", Color::Yellow.italic().bold().paint(">> Sending over LoRa..."),);
         }
         Err(err) => {
             println!("Radio error = {:?}", err);
@@ -108,7 +105,7 @@ pub async fn lora_receive(lora: &mut LoRaDevice) -> Option<MavFramePacket> {
         }
     };
     match lora
-        .prepare_for_rx(&mdltn_params, &rx_pkt_params, None, None, false)
+        .prepare_for_rx(&mdltn_params, &rx_pkt_params, Some(1), None, false)
         .await
     {
         Ok(()) => {}
@@ -119,10 +116,7 @@ pub async fn lora_receive(lora: &mut LoRaDevice) -> Option<MavFramePacket> {
     };
     match lora.rx(&rx_pkt_params, &mut receiving_buffer).await {
         Ok((_received_len, _rx_pkt_status)) => {
-            println!(
-                "{}",
-                Color::Yellow.italic().bold().paint("<< Receiving over long link!"),
-            );
+            println!("{}", Color::Yellow.italic().bold().paint("<< Receiving over LoRa!"),);
             let mavlink_frame = deserialize_frame(&receiving_buffer);
             mavlink_frame
         }
@@ -135,7 +129,7 @@ pub async fn lora_receive(lora: &mut LoRaDevice) -> Option<MavFramePacket> {
 
 pub fn create_modulation_params(lora: &mut LoRaDevice) -> Result<ModulationParams, RadioError> {
     lora.create_modulation_params(
-        SpreadingFactor::_7,
+        SpreadingFactor::_8,
         Bandwidth::_125KHz,
         CodingRate::_4_5,
         LORA_FREQUENCY_IN_HZ,

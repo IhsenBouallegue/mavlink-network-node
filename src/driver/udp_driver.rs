@@ -18,7 +18,7 @@ impl Driver<MavFramePacket> for UDPDriver {
         }
     }
 
-    fn receive(&self, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
+    async fn receive(&self, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
         let mavlink = self.driver_instance.clone();
         let mavlink_frame: MavFramePacket = mavlink_receive_blcoking(&mavlink);
         let on_receive = on_receive.lock().unwrap();
