@@ -1,29 +1,21 @@
 extern crate sx127x_lora;
 
-use crate::utils::mavlink_utils::deserialize_frame;
+use std::error::Error;
 
-use super::{
-    adapter::BlockingAsync,
-    delay_adapter::WithDelayNs,
-    iv::GenericSx127xInterfaceVariant,
-    types::{LoRaDevice, MavFramePacket, SpiDevice},
-};
 use ansi_term::Color;
 use embedded_hal_bus::spi::ExclusiveDevice;
-use lora_phy::{
-    mod_params::{Bandwidth, CodingRate, ModulationParams, RadioError, SpreadingFactor},
-    sx1276_7_8_9::{self, SX1276_7_8_9},
-    LoRa,
-};
-use rppal::{
-    gpio::Gpio,
-    hal::Delay,
-    spi::{Bus, Mode, SlaveSelect, Spi},
-};
-use std::{
-    error::Error,
-    sync::{Arc, Mutex},
-};
+use lora_phy::mod_params::{Bandwidth, CodingRate, ModulationParams, RadioError, SpreadingFactor};
+use lora_phy::sx1276_7_8_9::{self, SX1276_7_8_9};
+use lora_phy::LoRa;
+use rppal::gpio::Gpio;
+use rppal::hal::Delay;
+use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
+
+use super::adapter::BlockingAsync;
+use super::delay_adapter::WithDelayNs;
+use super::iv::GenericSx127xInterfaceVariant;
+use super::types::{LoRaDevice, MavFramePacket, SpiDevice};
+use crate::utils::mavlink_utils::deserialize_frame;
 
 const LORA_CS_PIN: u8 = 25;
 const LORA_RESET_PIN: u8 = 17;

@@ -1,34 +1,26 @@
-use super::abstract_driver::Driver;
-use crate::utils::lora_utils::transmit;
-use crate::utils::lora_utils::{create_lora, create_spi, lora_receive};
-use crate::utils::types::LoRaDevice;
-use crate::utils::types::MavFramePacket;
+use std::sync::{Arc, RwLock};
+
 use futures::executor::block_on;
-use std::sync::{Arc, Mutex, RwLock};
+
+use super::abstract_driver::Driver;
+use crate::utils::lora_utils::{create_lora, create_spi, lora_receive, transmit};
+use crate::utils::types::{LoRaDevice, MavFramePacket};
 pub struct LoRaDriver {
     pub driver_instance: Arc<RwLock<LoRaDevice>>,
 }
 
 impl Driver<MavFramePacket> for LoRaDriver {
-    fn send(&self, get_packet_to_send: Arc<Mutex<impl Fn() -> Option<MavFramePacket>>>) {
-        let get_packet_to_send = get_packet_to_send.lock().unwrap();
+    async fn send(&self, packet_to_send: MavFramePacket) {
         let lora = self.driver_instance.clone();
         let mut lora = lora.write().unwrap();
-        if let Some(data) = get_packet_to_send() {
-            block_on(transmit(&mut lora, &data));
-        }
+        transmit(&mut lora, &packet_to_send).await;
     }
 
-    async fn receive(&self, on_receive: Arc<Mutex<impl Fn(MavFramePacket)>>) {
+    async fn receive(&self) -> Option<MavFramePacket> {
         let lora = self.driver_instance.clone();
         let mut lora = lora.write().unwrap();
         let mavlink_frame = lora_receive(&mut lora).await;
-        let mavlink_frame = match mavlink_frame {
-            Some(mavlink_frame) => mavlink_frame,
-            None => return,
-        };
-        println!("Received: {:?}", mavlink_frame);
-        on_receive.lock().unwrap()(mavlink_frame);
+        mavlink_frame
     }
 
     fn create_instance() -> Self {

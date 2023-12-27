@@ -2,10 +2,8 @@ use embedded_hal_bus::spi::ExclusiveDevice;
 use lora_phy::sx1276_7_8_9::SX1276_7_8_9;
 use lora_phy::LoRa;
 use mavlink::ardupilotmega::MavMessage;
-use mavlink::MavConnection;
-use mavlink::MavFrame;
-use rppal::gpio::InputPin;
-use rppal::gpio::OutputPin;
+use mavlink::{MavConnection, MavFrame};
+use rppal::gpio::{InputPin, OutputPin};
 use rppal::hal::Delay;
 use rppal::spi::Spi;
 

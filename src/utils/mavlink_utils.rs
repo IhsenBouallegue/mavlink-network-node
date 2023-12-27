@@ -1,6 +1,8 @@
-use super::types::{MavDevice, MavFramePacket, NodeType};
 use ansi_term::Color;
-use mavlink::{ardupilotmega::MavMessage, MavHeader};
+use mavlink::ardupilotmega::MavMessage;
+use mavlink::MavHeader;
+
+use super::types::{MavDevice, MavFramePacket, NodeType};
 
 const GROUNDSATION_IP: &str = "192.168.1.150";
 const QGROUNDCONTROL_PORT: &str = "14550";
@@ -34,24 +36,24 @@ pub fn heartbeat_message() -> MavMessage {
     })
 }
 
-/// Create a message requesting the parameters list
-pub fn request_parameters() -> MavMessage {
-    MavMessage::PARAM_REQUEST_LIST(mavlink::ardupilotmega::PARAM_REQUEST_LIST_DATA {
-        target_system: 1,
-        target_component: 1,
-    })
-}
+// /// Create a message requesting the parameters list
+// pub fn request_parameters() -> MavMessage {
+//     MavMessage::PARAM_REQUEST_LIST(mavlink::ardupilotmega::PARAM_REQUEST_LIST_DATA {
+//         target_system: 1,
+//         target_component: 1,
+//     })
+// }
 
-/// Create a message enabling data streaming
-pub fn request_stream() -> MavMessage {
-    mavlink::ardupilotmega::MavMessage::REQUEST_DATA_STREAM(mavlink::ardupilotmega::REQUEST_DATA_STREAM_DATA {
-        target_system: 0,
-        target_component: 0,
-        req_stream_id: 0,
-        req_message_rate: 10,
-        start_stop: 1,
-    })
-}
+// /// Create a message enabling data streaming
+// pub fn request_stream() -> MavMessage {
+//     mavlink::ardupilotmega::MavMessage::REQUEST_DATA_STREAM(mavlink::ardupilotmega::REQUEST_DATA_STREAM_DATA {
+//         target_system: 0,
+//         target_component: 0,
+//         req_stream_id: 0,
+//         req_message_rate: 10,
+//         start_stop: 1,
+//     })
+// }
 
 pub fn deserialize_frame(buffer: &[u8; 255]) -> Option<MavFramePacket> {
     let mavlink_frame_result = MavFramePacket::deser(mavlink::MavlinkVersion::V2, buffer);
