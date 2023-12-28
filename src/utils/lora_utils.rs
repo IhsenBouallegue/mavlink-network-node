@@ -75,10 +75,10 @@ pub async fn transmit(lora: &mut LoRaDevice, mavlink_frame: &MavFramePacket) {
 
     match lora.tx(&mdltn_params, &mut tx_pkt_params, buffer, 100).await {
         Ok(()) => {
-            println!("{}", Color::Yellow.italic().bold().paint(">> Sending over LoRa..."),);
+            // println!("{}", Color::Yellow.italic().bold().paint(">> Sending over LoRa..."),);
         }
         Err(err) => {
-            println!("Radio error = {:?}", err);
+            // println!("Radio error = {:?}", err);
             return;
         }
     };
@@ -108,12 +108,12 @@ pub async fn lora_receive(lora: &mut LoRaDevice) -> Option<MavFramePacket> {
     };
     match lora.rx(&rx_pkt_params, &mut receiving_buffer).await {
         Ok((_received_len, _rx_pkt_status)) => {
-            println!("{}", Color::Yellow.italic().bold().paint("<< Receiving over LoRa!"),);
+            // println!("{}", Color::Yellow.italic().bold().paint("<< Receiving over LoRa!"),);
             let mavlink_frame = deserialize_frame(&receiving_buffer);
             mavlink_frame
         }
         Err(err) => {
-            println!("rx unsuccessful = {:?}", err);
+            // println!("rx unsuccessful = {:?}", err);
             return None;
         }
     }

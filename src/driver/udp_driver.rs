@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::abstract_driver::Driver;
+use crate::utils::logging_utils;
 use crate::utils::mavlink_utils::{
     create_groundstation_mavlink, create_mavlink, mavlink_receive_blcoking, mavlink_send,
 };
@@ -33,6 +34,8 @@ impl Driver<MavFramePacket> for UDPDriver {
                 mavlink = create_groundstation_mavlink();
             }
         }
+
+        logging_utils::log_driver_creation("UDPDriver");
 
         Self {
             driver_instance: Arc::new(mavlink),

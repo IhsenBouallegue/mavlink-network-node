@@ -1,0 +1,10 @@
+{"timestamp":"2023-12-28T17:51:57.932511Z","level":"INFO","fields":{"message":"Logging initialized"},"target":"mavlink_network_node"}
+{"timestamp":"2023-12-28T17:51:57.932624Z","level":"INFO","fields":{"message":"Logging initialized 2"},"target":"mavlink_network_node"}
+{"timestamp":"2023-12-28T17:51:57.932657Z","level":"INFO","fields":{"message":"dump log"},"target":"mavlink_network_node"}
+{"timestamp":"2023-12-28T17:51:57.933343Z","level":"INFO","fields":{"message":"Starting udp network"},"target":"mavlink_network_node"}
+{"timestamp":"2023-12-28T17:51:57.933501Z","level":"INFO","fields":{"message":"Transmit initiated"},"target":"mavlink_network_node::utils::logging_utils"}
+{"timestamp":"2023-12-28T17:51:57.933563Z","level":"INFO","fields":{"message":"Packet received","packet":"MavFrame { header: MavHeader { system_id: 201, component_id: 0, sequence: 0 }, msg: HEARTBEAT(HEARTBEAT_DATA { custom_mode: 0, mavtype: MAV_TYPE_QUADROTOR, autopilot: MAV_AUTOPILOT_ARDUPILOTMEGA, base_mode: (empty), system_status: MAV_STATE_STANDBY, mavlink_version: 3 }), protocol_version: V2 }"},"target":"mavlink_network_node::utils::logging_utils"}
+{"timestamp":"2023-12-28T17:51:57.933786Z","level":"INFO","fields":{"message":"Listen initiated"},"target":"mavlink_network_node::utils::logging_utils"}
+{"timestamp":"2023-12-28T17:51:57.987267Z","level":"INFO","fields":{"message":"Starting lora network"},"target":"mavlink_network_node"}
+{"timestamp":"2023-12-28T17:51:57.987591Z","level":"INFO","fields":{"message":"Transmit initiated"},"target":"mavlink_network_node::utils::logging_utils"}
+{"timestamp":"2023-12-28T17:51:57.987793Z","level":"INFO","fields":{"message":"Packet received","packet":"MavFrame { header: MavHeader { system_id: 201, component_id: 0, sequence: 0 }, msg: HEARTBEAT(HEARTBEAT_DATA { custom_mode: 0, mavtype: MAV_TYPE_QUADROTOR, autopilot: MAV_AUTOPILOT_ARDUPILOTMEGA, base_mode: (empty), system_status: MAV_STATE_STANDBY, mavlink_version: 3 }), protocol_version: V2 }"},"target":"mavlink_network_node::utils::logging_utils"}

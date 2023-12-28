@@ -68,12 +68,12 @@ pub fn deserialize_frame(buffer: &[u8; 255]) -> Option<MavFramePacket> {
 
 pub fn mavlink_receive_blcoking(mavlink_device: &MavDevice) -> MavFramePacket {
     let mavlink_frame = mavlink_device.recv_frame().expect("Failed to receive mavlink frame");
-    println!("{}", Color::Cyan.paint("<< Receiving frame over UDP"));
+    // println!("{}", Color::Cyan.paint("<< Receiving frame over UDP"));
     mavlink_frame
 }
 
 pub fn mavlink_send(mavlink_device: &MavDevice, mavlink_frame: &MavFramePacket) {
-    println!("{}", Color::Cyan.paint(">> Sending frame over UDP"));
+    // println!("{}", Color::Cyan.paint(">> Sending frame over UDP"));
     mavlink_device
         .send_frame(&mavlink_frame)
         .expect("Failed to send mavlink frame");

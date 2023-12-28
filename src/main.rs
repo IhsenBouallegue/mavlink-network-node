@@ -2,15 +2,15 @@ mod driver;
 mod network;
 mod utils;
 
-use std::sync::Arc;
 use std::{env, thread};
 
 use driver::lora_driver::LoRaDriver;
 use driver::udp_driver::UDPDriver;
-use futures::executor::block_on;
 use network::network_interface::{HalfDuplexNetworkInterface, NetworkInterface};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
+use tracing::info;
+use utils::logging_utils::init_logging;
 use utils::mavlink_utils::create_mavlink_heartbeat_frame;
 use utils::types::{MavFramePacket, NodeType};
 
@@ -19,6 +19,9 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     let node_type = NodeType::from_str(&args[1]).unwrap();
     std::env::set_var("NODE_TYPE", &args[1]);
+    let _guard = init_logging();
+    info!("Starting udp network");
+
     match node_type {
         NodeType::Drone => {
             let (to_send_udp_tx, to_send_udp_rx) = mpsc::channel(32);
@@ -28,6 +31,7 @@ async fn main() {
             let handle_udp = tokio::spawn(async move {
                 let mut udp_network =
                     HalfDuplexNetworkInterface::<UDPDriver, MavFramePacket>::new(to_send_udp_rx, received_udp_tx);
+                info!("Starting udp network");
                 udp_network.run().await;
             });
 
@@ -48,6 +52,7 @@ async fn main() {
                 let mut lora_network =
                     HalfDuplexNetworkInterface::<LoRaDriver, MavFramePacket>::new(to_send_rx, received_tx);
                 runtime.block_on(async {
+                    info!("Starting lora network");
                     lora_network.run().await;
                 });
             });

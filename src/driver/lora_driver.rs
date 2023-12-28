@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 use futures::executor::block_on;
 
 use super::abstract_driver::Driver;
+use crate::utils::logging_utils;
 use crate::utils::lora_utils::{create_lora, create_spi, lora_receive, transmit};
 use crate::utils::types::{LoRaDevice, MavFramePacket};
 pub struct LoRaDriver {
@@ -26,6 +27,8 @@ impl Driver<MavFramePacket> for LoRaDriver {
     fn create_instance() -> Self {
         let spi = create_spi().unwrap();
         let lora = block_on(create_lora(spi)).expect("Failed to create LoRa instance");
+        logging_utils::log_driver_creation("LoRaDriver");
+
         Self {
             driver_instance: Arc::new(RwLock::new(lora)),
         }
