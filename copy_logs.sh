@@ -2,14 +2,14 @@
 
 readonly TARGET_HOST=$1
 readonly TARGET_USER=node
-readonly TARGET_PATH=/home/${TARGET_USER}/logs/&{TARGET_HOST}
+readonly TARGET_PATH=/home/${TARGET_USER}/logs
 readonly TARGET_ADDRESS=${TARGET_USER}@${TARGET_HOST}.local
 
-readonly DEST_PATH=./
+readonly DEST_PATH=./logs/${TARGET_HOST}
 
 
 copy_logs() {
-    echo "Copying logs from Raspberry Pi..."
+    echo "Copying logs from Raspberry Pi to " ${DEST_PATH} "..."
     rsync -avz --progress ${TARGET_ADDRESS}:${TARGET_PATH} ${DEST_PATH}
     echo "Copy complete."
 }

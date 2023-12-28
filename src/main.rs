@@ -9,7 +9,6 @@ use driver::udp_driver::UDPDriver;
 use network::network_interface::{HalfDuplexNetworkInterface, NetworkInterface};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
-use tracing::info;
 use utils::logging_utils::init_logging;
 use utils::mavlink_utils::create_mavlink_heartbeat_frame;
 use utils::types::{MavFramePacket, NodeType};
@@ -20,7 +19,6 @@ async fn main() {
     let node_type = NodeType::from_str(&args[1]).unwrap();
     std::env::set_var("NODE_TYPE", &args[1]);
     let _guard = init_logging();
-    info!("Starting udp network");
 
     match node_type {
         NodeType::Drone => {
@@ -31,7 +29,6 @@ async fn main() {
             let handle_udp = tokio::spawn(async move {
                 let mut udp_network =
                     HalfDuplexNetworkInterface::<UDPDriver, MavFramePacket>::new(to_send_udp_rx, received_udp_tx);
-                info!("Starting udp network");
                 udp_network.run().await;
             });
 
@@ -52,7 +49,6 @@ async fn main() {
                 let mut lora_network =
                     HalfDuplexNetworkInterface::<LoRaDriver, MavFramePacket>::new(to_send_rx, received_tx);
                 runtime.block_on(async {
-                    info!("Starting lora network");
                     lora_network.run().await;
                 });
             });
@@ -67,7 +63,7 @@ async fn main() {
                 loop {
                     let received = received_udp_rx.recv().await;
                     if let Some(received) = received {
-                        println!("Received: {:?}", received);
+                        // println!("Received: {:?}", received);
                         to_send_clone2.send(received).await.unwrap();
                     }
                     // println!("Tried to recv");
