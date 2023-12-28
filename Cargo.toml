@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 linux-embedded-hal = "0.3.2"
-mavlink = "0.12.2"
+mavlink = { version = "0.12.2", features = ["serde"] }
+
 sx127x_lora = "0.3.1"
 rppal = { path = "../rppal", features = ["hal"] }
 ansi_term = "0.12.1"
@@ -30,3 +31,5 @@ tracing-subscriber = { version = "0.3.1", features = [
 ] }
 regex = { version = "1", features = ["unicode-case"] }
 tracing-appender = "0.2.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

@@ -540,6 +540,8 @@ dependencies = [
  "mavlink",
  "regex",
  "rppal",
+ "serde",
+ "serde_json",
  "sx127x_lora",
  "tokio",
  "tracing",

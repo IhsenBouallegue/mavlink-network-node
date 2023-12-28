@@ -2,7 +2,7 @@
 
 readonly TARGET_HOST=$1
 readonly TARGET_USER=node
-readonly TARGET_PATH=/home/${TARGET_USER}/logs
+readonly TARGET_PATH=/home/${TARGET_USER}/logs/&{TARGET_HOST}
 readonly TARGET_ADDRESS=${TARGET_USER}@${TARGET_HOST}.local
 
 readonly DEST_PATH=./

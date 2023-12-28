@@ -1,7 +1,9 @@
 use std::fmt::Debug;
 
 use chrono::Utc;
-use tracing::{debug, error, info};
+use serde::Serialize;
+use serde_json::to_value;
+use tracing::{debug, error, field, info};
 use tracing_appender::rolling::{self, RollingFileAppender};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, EnvFilter, Registry};
@@ -22,72 +24,75 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
         .with(stdout_layer);
 
     tracing::subscriber::set_global_default(subscriber).expect("Unable to set global subscriber");
-    info!("Logging initialized");
-    info!("Logging initialized 2");
+
     _guard
 }
 
-// Log a packet being sent with INFO level
-pub fn log_packet_send<Packet: Debug>(packet: &Packet) {
-    info!(?packet, "Packet sent successfully");
-}
-
-// Log a packet being received with INFO level
-pub fn log_packet_receive<Packet: Debug>(packet: &Packet) {
-    info!(?packet, "Packet received");
-}
-
 // Log an error during packet sending with ERROR level
-pub fn log_packet_send_error<Packet: Debug>(packet: &Packet, error: &str) {
-    error!(?packet, error, "Packet send failed");
+pub fn log_packet_send_error<Packet: Debug>(driver: &str, packet: &Packet, error: &str) {
+    error!(target: "network", driver, ?packet, error, "Packet send failed");
 }
 
 // Log an error during packet receiving with ERROR level
-pub fn log_packet_receive_error(error: &str) {
-    error!(%error, "Packet receive failed");
+pub fn log_packet_receive_error(driver: &str, error: &str) {
+    error!(target: "network", driver, %error, "Packet receive failed");
 }
 
 // Log the contents of a packet being sent with DEBUG level
-pub fn log_debug_send_packet<Packet: Debug>(packet: &Packet) {
-    debug!(?packet, "Sending packet with contents");
+pub fn log_debug_send_packet<Packet: Debug + Serialize>(driver: &str, packet: &Packet) {
+    match to_value(packet) {
+        Ok(json_packet) => {
+            debug!(target: "network", driver, %json_packet, "Sending packet with contents");
+        }
+        Err(e) => {
+            debug!(target: "network", driver, "Failed to serialize packet for logging: {:?}", e);
+        }
+    }
 }
 
 // Log the contents of a packet being received with DEBUG level
-pub fn log_debug_receive_packet<Packet: Debug>(packet: &Packet) {
-    debug!(?packet, "Received packet with contents");
+pub fn log_debug_receive_packet<Packet: Debug + Serialize>(driver: &str, packet: &Packet) {
+    match to_value(packet) {
+        Ok(json_packet) => {
+            debug!(target: "network", driver, %json_packet, "Received packet with contents");
+        }
+        Err(e) => {
+            debug!(target: "network", driver, "Failed to serialize packet for logging: {:?}", e);
+        }
+    }
 }
 
 // Log the creation of a driver instance with DEBUG level
-pub fn log_driver_creation(driver_name: &str) {
-    debug!(%driver_name, "Driver instance created");
+pub fn log_driver_creation(driver: &str) {
+    debug!(target: "network", driver, "Driver instance created");
 }
 
 // Log the start of the transmission process with INFO level
-pub fn log_transmit_initiated() {
-    info!("Transmit initiated");
+pub fn log_transmit_initiated(driver: &str) {
+    info!(target: "network", driver, "Transmit initiated");
 }
 
 // Log the start of the listening process with INFO level
-pub fn log_listen_initiated() {
-    info!("Listen initiated");
+pub fn log_listen_initiated(driver: &str) {
+    info!(target: "network", driver, "Listen initiated");
 }
 
 // Log an error during transmission with ERROR level
-pub fn log_transmit_error(error: &str) {
-    error!(%error, "Transmit error");
+pub fn log_transmit_error(driver: &str, error: &str) {
+    error!(target: "network", driver, %error, "Transmit error");
 }
 
 // Log an error during listening with ERROR level
-pub fn log_listen_error(error: &str) {
-    error!(%error, "Listen error");
+pub fn log_listen_error(driver: &str, error: &str) {
+    error!(target: "network", driver, %error, "Listen error");
 }
 
 // Log the creation of a network interface with DEBUG level
-pub fn log_network_interface_creation() {
-    debug!("Network interface created with channels");
+pub fn log_network_interface_creation(driver: &'static str) {
+    debug!(target: "network", driver, "Network interface created with channels");
 }
 
 // Log the running of the network interface with INFO level
-pub fn log_network_interface_running() {
-    info!("Running network interface");
+pub fn log_network_interface_running(driver: &str) {
+    info!(target: "network", driver, "Running network interface");
 }

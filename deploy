@@ -18,4 +18,4 @@ readonly SOURCE_PATH=./target/${TARGET_ARCH}/release/${PROJECT}
 
 cargo build --release
 rsync ${SOURCE_PATH} ${TARGET_HOST}:${TARGET_PATH}
-ssh -t ${TARGET_HOST} ${TARGET_PATH} ${NODE_TYPE}
+ssh -t ${TARGET_HOST} "RUST_LOG=debug ${TARGET_PATH} ${NODE_TYPE}"
