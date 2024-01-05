@@ -1,8 +1,11 @@
-use ansi_term::Color;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use mavlink::ardupilotmega::MavMessage;
 use mavlink::MavHeader;
 
+use super::logging_utils::{log_packet_receive_error, log_packet_transmit_error};
 use super::types::{MavDevice, MavFramePacket, NodeType};
+use crate::driver::udp_driver::UDP_DRIVER;
 
 const GROUNDSATION_IP: &str = "192.168.1.150";
 const QGROUNDCONTROL_PORT: &str = "14550";
@@ -55,7 +58,7 @@ pub fn heartbeat_message() -> MavMessage {
 //     })
 // }
 
-pub fn deserialize_frame(buffer: &[u8; 255]) -> Option<MavFramePacket> {
+pub fn deserialize_frame(buffer: &[u8]) -> Option<MavFramePacket> {
     let mavlink_frame_result = MavFramePacket::deser(mavlink::MavlinkVersion::V2, buffer);
     match mavlink_frame_result {
         Ok(mavlink_frame) => Some(mavlink_frame),
@@ -66,18 +69,25 @@ pub fn deserialize_frame(buffer: &[u8; 255]) -> Option<MavFramePacket> {
     }
 }
 
-pub fn mavlink_receive_blcoking(mavlink_device: &MavDevice) -> MavFramePacket {
-    let mavlink_frame = mavlink_device.recv_frame().expect("Failed to receive mavlink frame");
-    // println!("{}", Color::Cyan.paint("<< Receiving frame over UDP"));
-    mavlink_frame
+pub fn mavlink_receive_blcoking(mavlink_device: &MavDevice) -> Option<MavFramePacket> {
+    let mavlink_frame = mavlink_device.recv_frame();
+    match mavlink_frame {
+        Ok(mavlink_frame) => Some(mavlink_frame),
+        Err(err) => {
+            log_packet_receive_error(UDP_DRIVER, &err.to_string());
+            None
+        }
+    }
 }
 
 pub fn mavlink_send(mavlink_device: &MavDevice, mavlink_frame: &MavFramePacket) {
-    // println!("{}", Color::Cyan.paint(">> Sending frame over UDP"));
-    mavlink_device
-        .send_frame(&mavlink_frame)
-        .expect("Failed to send mavlink frame");
+    match mavlink_device.send_frame(&mavlink_frame) {
+        Ok(_size) => {}
+        Err(err) => log_packet_transmit_error(UDP_DRIVER, mavlink_frame, &err.to_string()),
+    }
 }
+
+static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
 
 pub fn create_mavlink_header() -> MavHeader {
     let node_type = NodeType::from_str(std::env::var("NODE_TYPE").unwrap().as_str()).unwrap();
@@ -86,8 +96,10 @@ pub fn create_mavlink_header() -> MavHeader {
         NodeType::Gateway => 101,
     };
 
+    let sequence = SEQUENCE.fetch_add(1, Ordering::SeqCst);
+
     mavlink::MavHeader {
-        sequence: 0,
+        sequence: sequence as u8,
         system_id: system_id,
         component_id: 0,
     }

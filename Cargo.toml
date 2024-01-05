@@ -11,7 +11,6 @@ mavlink = { version = "0.12.2", features = ["serde"] }
 
 sx127x_lora = "0.3.1"
 rppal = { path = "../rppal", features = ["hal"] }
-ansi_term = "0.12.1"
 lora-phy = { git = "https://github.com/lora-rs/lora-rs.git", rev = "d86786988a4a446963d1e85e3ab99a225734cedd" }
 tokio = { version = "1", features = ["full"] }
 embedded-hal-bus = { version = "0.1.0-rc.2", features = ["async", "std"] }

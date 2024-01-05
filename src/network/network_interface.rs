@@ -6,13 +6,13 @@ use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::driver::abstract_driver::Driver;
 use crate::utils::logging_utils::{
-    log_debug_receive_packet, log_debug_send_packet, log_driver_creation, log_listen_initiated, log_transmit_error,
+    log_debug_send_to_main, log_listen_initiated, log_network_interface_creation, log_network_interface_running,
     log_transmit_initiated,
 };
 
 pub trait NetworkInterface<DriverType: Driver<PacketType>, PacketType: Send> {
-    async fn transmit(&mut self);
-    async fn listen(&self);
+    async fn transmit(&mut self, packet: PacketType);
+    async fn listen(&mut self) -> Option<PacketType>;
     fn new(to_send: Receiver<PacketType>, received: Sender<PacketType>) -> Self;
     async fn run(&mut self);
 }
@@ -31,8 +31,7 @@ where
 {
     fn new(to_send: Receiver<PacketType>, received: Sender<PacketType>) -> Self {
         let driver_instance = Arc::new(DriverType::create_instance());
-        log_driver_creation(&driver_instance.to_string());
-
+        log_network_interface_creation(&driver_instance.to_string());
         Self {
             driver: driver_instance,
             to_send,
@@ -40,32 +39,30 @@ where
         }
     }
 
-    async fn transmit(&mut self) {
+    async fn transmit(&mut self, packet: PacketType) {
         log_transmit_initiated(&self.driver.to_string());
-        match self.to_send.try_recv() {
-            Ok(packet) => {
-                log_debug_send_packet(&self.driver.to_string(), &packet);
-                self.driver.send(packet).await;
-                // tokio::time::sleep(Duration::from_millis(200)).await;
-            }
-            Err(err) => log_transmit_error(&self.driver.to_string(), &err.to_string()),
-        }
+        self.driver.send(packet).await;
+        // log_transmit_error(&self.driver.to_string(), &err.to_string())
     }
 
-    async fn listen(&self) {
+    async fn listen(&mut self) -> Option<PacketType> {
         log_listen_initiated(&self.driver.to_string());
-        let packet = self.driver.receive().await;
-        if let Some(packet) = packet {
-            log_debug_receive_packet(&self.driver.to_string(), &packet);
-            self.received.send(packet).await.unwrap();
-            // tokio::time::sleep(Duration::from_millis(200)).await;
-        }
+        self.driver.receive().await
     }
 
     async fn run(&mut self) {
+        log_network_interface_running(&self.driver.to_string());
         loop {
-            self.transmit().await;
-            self.listen().await;
+            tokio::select! {
+                Some(packet) = self.to_send.recv() => {
+                    self.transmit(packet).await;
+                }
+                Some(packet) = self.driver.receive() => {
+                    log_listen_initiated(&self.driver.to_string());
+                    self.received.send(packet).await.unwrap();
+                    log_debug_send_to_main(&self.driver.to_string());
+                }
+            }
         }
     }
 }

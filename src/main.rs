@@ -4,12 +4,12 @@ mod utils;
 
 use std::{env, thread};
 
-use driver::lora_driver::LoRaDriver;
-use driver::udp_driver::UDPDriver;
+use driver::lora_driver::{LoRaDriver, LORA_DRIVER};
+use driver::udp_driver::{UDPDriver, UDP_DRIVER};
 use network::network_interface::{HalfDuplexNetworkInterface, NetworkInterface};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
-use utils::logging_utils::init_logging;
+use utils::logging_utils::{init_logging, log_debug_send_to_network};
 use utils::mavlink_utils::create_mavlink_heartbeat_frame;
 use utils::types::{MavFramePacket, NodeType};
 
@@ -22,106 +22,154 @@ async fn main() {
 
     match node_type {
         NodeType::Drone => {
-            let (to_send_udp_tx, to_send_udp_rx) = mpsc::channel(32);
+            // Set up udp network with channels
+            let (transmit_udp_tx, transmit_udp_rx) = mpsc::channel(32);
             let (received_udp_tx, mut received_udp_rx) = mpsc::channel(32);
-            let to_send_udp_clone = to_send_udp_tx.clone();
 
-            let handle_udp = tokio::spawn(async move {
+            let udp_thread_handle = tokio::spawn(async move {
                 let mut udp_network =
-                    HalfDuplexNetworkInterface::<UDPDriver, MavFramePacket>::new(to_send_udp_rx, received_udp_tx);
+                    HalfDuplexNetworkInterface::<UDPDriver, MavFramePacket>::new(transmit_udp_rx, received_udp_tx);
                 udp_network.run().await;
             });
 
-            tokio::spawn(async move {
-                loop {
-                    to_send_udp_clone.send(create_mavlink_heartbeat_frame()).await.unwrap();
-                    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-                }
-            });
+            // Set up lora network with channels
+            let (transmit_lora_tx, transmit_lora_rx) = mpsc::channel(32);
+            let (received_lora_tx, mut received_lora_rx) = mpsc::channel(32);
 
-            let (to_send_tx, to_send_rx) = mpsc::channel(32);
-            let (received_tx, mut received_rx) = mpsc::channel(32);
-            let to_send_clone = to_send_tx.clone();
-            let to_send_clone2 = to_send_tx.clone();
-
-            let handle = thread::spawn(move || {
+            let looa_thread_handle = thread::spawn(move || {
                 let runtime = Runtime::new().expect("Failed to create a runtime");
                 let mut lora_network =
-                    HalfDuplexNetworkInterface::<LoRaDriver, MavFramePacket>::new(to_send_rx, received_tx);
+                    HalfDuplexNetworkInterface::<LoRaDriver, MavFramePacket>::new(transmit_lora_rx, received_lora_tx);
                 runtime.block_on(async {
                     lora_network.run().await;
                 });
             });
+
+            // Periodically send a heartbeat to udp network
+            let transmit_udp_tx_clone = transmit_udp_tx.clone();
             tokio::spawn(async move {
                 loop {
-                    to_send_clone.send(create_mavlink_heartbeat_frame()).await.unwrap();
+                    log_debug_send_to_network(UDP_DRIVER);
+                    transmit_udp_tx_clone
+                        .send(create_mavlink_heartbeat_frame())
+                        .await
+                        .unwrap();
                     tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
                 }
             });
 
-            let handler_udp = tokio::spawn(async move {
+            // Periodically send a heartbeat to lora network
+            let transmit_lora_tx_clone = transmit_lora_tx.clone();
+            tokio::spawn(async move {
+                loop {
+                    log_debug_send_to_network(LORA_DRIVER);
+                    transmit_lora_tx_clone
+                        .send(create_mavlink_heartbeat_frame())
+                        .await
+                        .unwrap();
+                    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+                }
+            });
+
+            // Forward packets from lora to udp
+            tokio::spawn(async move {
+                loop {
+                    let received = received_lora_rx.recv().await;
+                    if let Some(received) = received {
+                        log_debug_send_to_network(UDP_DRIVER);
+                        transmit_udp_tx.send(received).await.unwrap();
+                    }
+                }
+            });
+
+            // Forward packets from udp to lora
+            tokio::spawn(async move {
                 loop {
                     let received = received_udp_rx.recv().await;
                     if let Some(received) = received {
-                        // println!("Received: {:?}", received);
-                        to_send_clone2.send(received).await.unwrap();
+                        log_debug_send_to_network(LORA_DRIVER);
+                        transmit_lora_tx.send(received).await.unwrap();
                     }
-                    // println!("Tried to recv");
                 }
             });
 
-            handle_udp.await.unwrap();
-            handler_udp.await.unwrap();
-            handle.join().unwrap();
+            udp_thread_handle.await.unwrap();
+            looa_thread_handle.join().unwrap();
         }
         NodeType::Gateway => {
-            // let (to_send_tx, to_send_rx) = mpsc::channel(32);
-            // let (received_tx, received_rx) = mpsc::channel(32);
-            // let to_send_clone = to_send_tx.clone();
+            // Set up udp network with channels
+            let (transmit_udp_tx, transmit_udp_rx) = mpsc::channel(32);
+            let (received_udp_tx, mut received_udp_rx) = mpsc::channel(32);
 
-            // let handle = tokio::spawn(async move {
-            //     let mut udp_network =
-            //         HalfDuplexNetworkInterface::<UDPDriver, MavFramePacket>::new(to_send_rx, received_tx);
-            //     udp_network.run().await;
-            // });
+            let udp_thread_handle = tokio::spawn(async move {
+                let mut udp_network =
+                    HalfDuplexNetworkInterface::<UDPDriver, MavFramePacket>::new(transmit_udp_rx, received_udp_tx);
+                udp_network.run().await;
+            });
 
-            // tokio::spawn(async move {
-            //     loop {
-            //         to_send_clone.send(create_mavlink_heartbeat_frame()).await.unwrap();
-            //         tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-            //     }
-            // });
+            // Set up lora network with channels
+            let (transmit_lora_tx, transmit_lora_rx) = mpsc::channel(32);
+            let (received_lora_tx, mut received_lora_rx) = mpsc::channel(32);
 
-            // handle.await.unwrap();
-            let (to_send_tx, to_send_rx) = mpsc::channel(32);
-            let (received_tx, mut received_rx) = mpsc::channel(32);
-            let to_send_clone = to_send_tx.clone();
-
-            let handle = thread::spawn(move || {
+            let looa_thread_handle = thread::spawn(move || {
                 let runtime = Runtime::new().expect("Failed to create a runtime");
                 let mut lora_network =
-                    HalfDuplexNetworkInterface::<LoRaDriver, MavFramePacket>::new(to_send_rx, received_tx);
+                    HalfDuplexNetworkInterface::<LoRaDriver, MavFramePacket>::new(transmit_lora_rx, received_lora_tx);
                 runtime.block_on(async {
                     lora_network.run().await;
                 });
             });
-            // tokio::spawn(async move {
-            //     loop {
-            //         to_send_clone.send(create_mavlink_heartbeat_frame()).await.unwrap();
-            //         tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-            //     }
-            // });
-            let handler = tokio::spawn(async move {
+
+            // Periodically send a heartbeat to udp network
+            let transmit_udp_tx_clone = transmit_udp_tx.clone();
+            tokio::spawn(async move {
                 loop {
-                    let received = received_rx.recv().await;
+                    log_debug_send_to_network(UDP_DRIVER);
+                    transmit_udp_tx_clone
+                        .send(create_mavlink_heartbeat_frame())
+                        .await
+                        .unwrap();
+                    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+                }
+            });
+
+            // Periodically send a heartbeat to lora network
+            let transmit_lora_tx_clone = transmit_lora_tx.clone();
+            tokio::spawn(async move {
+                loop {
+                    log_debug_send_to_network(LORA_DRIVER);
+                    transmit_lora_tx_clone
+                        .send(create_mavlink_heartbeat_frame())
+                        .await
+                        .unwrap();
+                    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+                }
+            });
+
+            // Forward packets from lora to udp
+            tokio::spawn(async move {
+                loop {
+                    let received = received_lora_rx.recv().await;
                     if let Some(received) = received {
-                        println!("Received: {:?}", received);
+                        log_debug_send_to_network(UDP_DRIVER);
+                        transmit_udp_tx.send(received).await.unwrap();
                     }
                 }
             });
 
-            handler.await.unwrap();
-            handle.join().unwrap();
+            // Forward packets from udp to lora
+            tokio::spawn(async move {
+                loop {
+                    let received = received_udp_rx.recv().await;
+                    if let Some(received) = received {
+                        log_debug_send_to_network(LORA_DRIVER);
+                        transmit_lora_tx.send(received).await.unwrap();
+                    }
+                }
+            });
+
+            udp_thread_handle.await.unwrap();
+            looa_thread_handle.join().unwrap();
         }
     }
 }

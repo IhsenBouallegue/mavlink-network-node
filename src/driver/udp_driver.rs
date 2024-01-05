@@ -2,10 +2,13 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 use super::abstract_driver::Driver;
+use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_packet, log_driver_creation};
 use crate::utils::mavlink_utils::{
     create_groundstation_mavlink, create_mavlink, mavlink_receive_blcoking, mavlink_send,
 };
 use crate::utils::types::{MavDevice, MavFramePacket, NodeType};
+
+pub const UDP_DRIVER: &str = "udp_driver";
 
 pub struct UDPDriver {
     pub driver_instance: Arc<MavDevice>,
@@ -13,7 +16,7 @@ pub struct UDPDriver {
 
 impl Display for UDPDriver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "udp_driver")
+        write!(f, "{}", UDP_DRIVER)
     }
 }
 
@@ -29,6 +32,7 @@ impl Driver<MavFramePacket> for UDPDriver {
                 mavlink = create_groundstation_mavlink();
             }
         }
+        log_driver_creation(UDP_DRIVER);
 
         Self {
             driver_instance: Arc::new(mavlink),
@@ -37,12 +41,16 @@ impl Driver<MavFramePacket> for UDPDriver {
 
     async fn send(&self, packet_to_send: MavFramePacket) {
         let mavlink = self.driver_instance.clone();
+        log_debug_send_packet(&self.to_string(), &packet_to_send);
         mavlink_send(&mavlink, &packet_to_send)
     }
 
     async fn receive(&self) -> Option<MavFramePacket> {
         let mavlink = self.driver_instance.clone();
-        let mavlink_frame: MavFramePacket = mavlink_receive_blcoking(&mavlink);
-        Some(mavlink_frame)
+        if let Some(mavlink_frame) = mavlink_receive_blcoking(&mavlink) {
+            log_debug_receive_packet(UDP_DRIVER, &mavlink_frame, None);
+            return Some(mavlink_frame);
+        }
+        None
     }
 }
