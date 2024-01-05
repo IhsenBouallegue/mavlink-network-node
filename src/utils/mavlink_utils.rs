@@ -87,28 +87,38 @@ pub fn mavlink_send(mavlink_device: &MavDevice, mavlink_frame: &MavFramePacket) 
     }
 }
 
-static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
-
-pub fn create_mavlink_header() -> MavHeader {
-    let node_type = NodeType::from_str(std::env::var("NODE_TYPE").unwrap().as_str()).unwrap();
-    let system_id = match node_type {
-        NodeType::Drone => 201,
-        NodeType::Gateway => 101,
-    };
-
-    let sequence = SEQUENCE.fetch_add(1, Ordering::SeqCst);
-
-    mavlink::MavHeader {
-        sequence: sequence as u8,
-        system_id: system_id,
-        component_id: 0,
-    }
+pub struct MavlinkHeaderGenerator {
+    sequence: AtomicUsize,
 }
 
-pub fn create_mavlink_heartbeat_frame() -> MavFramePacket {
-    MavFramePacket {
-        header: create_mavlink_header(),
-        msg: heartbeat_message(),
-        protocol_version: mavlink::MavlinkVersion::V2,
+impl MavlinkHeaderGenerator {
+    pub fn new() -> MavlinkHeaderGenerator {
+        MavlinkHeaderGenerator {
+            sequence: AtomicUsize::new(0),
+        }
+    }
+
+    fn create_mavlink_header(&self) -> MavHeader {
+        let node_type = NodeType::from_str(&std::env::var("NODE_TYPE").unwrap()).unwrap();
+        let system_id = match node_type {
+            NodeType::Drone => 201,
+            NodeType::Gateway => 101,
+        };
+
+        let sequence = self.sequence.fetch_add(1, Ordering::SeqCst);
+
+        MavHeader {
+            sequence: sequence as u8,
+            system_id: system_id,
+            component_id: 0,
+        }
+    }
+
+    pub fn create_mavlink_heartbeat_frame(&self) -> MavFramePacket {
+        MavFramePacket {
+            header: self.create_mavlink_header(),
+            msg: heartbeat_message(),
+            protocol_version: mavlink::MavlinkVersion::V2,
+        }
     }
 }

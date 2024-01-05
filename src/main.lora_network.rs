@@ -22,16 +22,6 @@ async fn main() {
 
     match node_type {
         NodeType::Drone => {
-            // Set up udp network with channels
-            let (transmit_udp_tx, transmit_udp_rx) = mpsc::channel(32);
-            let (received_udp_tx, mut received_udp_rx) = mpsc::channel(32);
-
-            let udp_thread_handle = tokio::spawn(async move {
-                let mut udp_network =
-                    HalfDuplexNetworkInterface::<UDPDriver, MavFramePacket>::new(transmit_udp_rx, received_udp_tx);
-                udp_network.run().await;
-            });
-
             // Set up lora network with channels
             let (transmit_lora_tx, transmit_lora_rx) = mpsc::channel(32);
             let (received_lora_tx, mut received_lora_rx) = mpsc::channel(32);
@@ -43,19 +33,6 @@ async fn main() {
                 runtime.block_on(async {
                     lora_network.run().await;
                 });
-            });
-
-            // Periodically send a heartbeat to udp network
-            let transmit_udp_tx_clone = transmit_udp_tx.clone();
-            tokio::spawn(async move {
-                loop {
-                    log_debug_send_to_network(UDP_DRIVER);
-                    transmit_udp_tx_clone
-                        .send(create_mavlink_heartbeat_frame())
-                        .await
-                        .unwrap();
-                    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-                }
             });
 
             // Periodically send a heartbeat to lora network
@@ -76,37 +53,14 @@ async fn main() {
                 loop {
                     let received = received_lora_rx.recv().await;
                     if let Some(received) = received {
-                        log_debug_send_to_network(UDP_DRIVER);
-                        transmit_udp_tx.send(received).await.unwrap();
+                        // log_debug_send_to_network(UDP_DRIVER);
                     }
                 }
             });
 
-            // Forward packets from udp to lora
-            tokio::spawn(async move {
-                loop {
-                    let received = received_udp_rx.recv().await;
-                    if let Some(received) = received {
-                        log_debug_send_to_network(LORA_DRIVER);
-                        transmit_lora_tx.send(received).await.unwrap();
-                    }
-                }
-            });
-
-            udp_thread_handle.await.unwrap();
             looa_thread_handle.join().unwrap();
         }
         NodeType::Gateway => {
-            // Set up udp network with channels
-            let (transmit_udp_tx, transmit_udp_rx) = mpsc::channel(32);
-            let (received_udp_tx, mut received_udp_rx) = mpsc::channel(32);
-
-            let udp_thread_handle = tokio::spawn(async move {
-                let mut udp_network =
-                    HalfDuplexNetworkInterface::<UDPDriver, MavFramePacket>::new(transmit_udp_rx, received_udp_tx);
-                udp_network.run().await;
-            });
-
             // Set up lora network with channels
             let (transmit_lora_tx, transmit_lora_rx) = mpsc::channel(32);
             let (received_lora_tx, mut received_lora_rx) = mpsc::channel(32);
@@ -118,19 +72,6 @@ async fn main() {
                 runtime.block_on(async {
                     lora_network.run().await;
                 });
-            });
-
-            // Periodically send a heartbeat to udp network
-            let transmit_udp_tx_clone = transmit_udp_tx.clone();
-            tokio::spawn(async move {
-                loop {
-                    log_debug_send_to_network(UDP_DRIVER);
-                    transmit_udp_tx_clone
-                        .send(create_mavlink_heartbeat_frame())
-                        .await
-                        .unwrap();
-                    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-                }
             });
 
             // Periodically send a heartbeat to lora network
@@ -151,24 +92,12 @@ async fn main() {
                 loop {
                     let received = received_lora_rx.recv().await;
                     if let Some(received) = received {
-                        log_debug_send_to_network(UDP_DRIVER);
-                        transmit_udp_tx.send(received).await.unwrap();
+                        println!("Received from lora {:#?}", received);
+                        // log_debug_send_to_network(UDP_DRIVER);
                     }
                 }
             });
 
-            // Forward packets from udp to lora
-            tokio::spawn(async move {
-                loop {
-                    let received = received_udp_rx.recv().await;
-                    if let Some(received) = received {
-                        log_debug_send_to_network(LORA_DRIVER);
-                        transmit_lora_tx.send(received).await.unwrap();
-                    }
-                }
-            });
-
-            udp_thread_handle.await.unwrap();
             looa_thread_handle.join().unwrap();
         }
     }
