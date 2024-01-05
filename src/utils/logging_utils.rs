@@ -44,7 +44,7 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
 
 // Log an error during packet sending with ERROR level
 pub fn log_packet_transmit_error<Packet: Debug>(driver: &str, packet: &Packet, error: &str) {
-    error!(target: "network", driver, ?packet, error, "{}",  PACKET_TRANSMIT_ERROR_MSG);
+    error!(target: "network", driver, ?packet, error, "{}", PACKET_TRANSMIT_ERROR_MSG);
 }
 
 // Log an error during packet receiving with ERROR level
@@ -56,7 +56,7 @@ pub fn log_packet_receive_error(driver: &str, error: &str) {
 pub fn log_debug_send_packet<Packet: Debug + Serialize>(driver: &str, packet: &Packet) {
     match to_value(packet) {
         Ok(json_packet) => {
-            debug!(target: "network", driver, %json_packet, "{}",  SEND_PACKET_MSG);
+            debug!(target: "network", driver, %json_packet, "{}", SEND_PACKET_MSG);
         }
         Err(e) => {
             debug!(target: "network", driver, "Failed to serialize packet for logging: {:?}", e);
@@ -69,9 +69,9 @@ pub fn log_debug_receive_packet<Packet: Debug + Serialize>(driver: &str, packet:
     match to_value(packet) {
         Ok(json_packet) => {
             if let Some(rssi_value) = rssi {
-                debug!(target: "network", driver, rssi = rssi_value, %json_packet, RECEIVE_PACKET_MSG);
+                debug!(target: "network", driver, rssi = rssi_value, %json_packet, "{}", RECEIVE_PACKET_MSG);
             } else {
-                debug!(target: "network", driver, %json_packet, RECEIVE_PACKET_MSG);
+                debug!(target: "network", driver, %json_packet, "{}", RECEIVE_PACKET_MSG);
             }
         }
         Err(e) => {
