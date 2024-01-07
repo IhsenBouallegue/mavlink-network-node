@@ -1,7 +1,9 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 use mavlink::ardupilotmega::MavMessage;
 use mavlink::MavHeader;
+use tokio::time::{self, Duration};
 
 use super::logging_utils::{log_packet_receive_error, log_packet_transmit_error};
 use super::types::{MavDevice, MavFramePacket, NodeType};
@@ -69,12 +71,28 @@ pub fn deserialize_frame(buffer: &[u8]) -> Option<MavFramePacket> {
     }
 }
 
-pub fn mavlink_receive_blcoking(mavlink_device: &MavDevice) -> Option<MavFramePacket> {
-    let mavlink_frame = mavlink_device.recv_frame();
-    match mavlink_frame {
-        Ok(mavlink_frame) => Some(mavlink_frame),
-        Err(err) => {
-            log_packet_receive_error(UDP_DRIVER, &err.to_string());
+pub async fn mavlink_receive_async(mavlink_device: Arc<MavDevice>) -> Option<MavFramePacket> {
+    let timeout_duration = Duration::from_secs(1);
+
+    match time::timeout(
+        timeout_duration,
+        tokio::task::spawn_blocking(move || {
+            let mav_device = mavlink_device.clone();
+            mav_device.recv_frame()
+        }),
+    )
+    .await
+    {
+        Ok(result) => match result {
+            Ok(Ok(mavlink_frame)) => Some(mavlink_frame),
+            Err(err) => {
+                log_packet_receive_error(UDP_DRIVER, &err.to_string());
+                None
+            }
+            _ => None,
+        },
+        Err(_) => {
+            log_packet_receive_error(UDP_DRIVER, "Timeout occurred");
             None
         }
     }

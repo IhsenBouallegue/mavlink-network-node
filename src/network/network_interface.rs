@@ -42,7 +42,6 @@ where
     async fn transmit(&mut self, packet: PacketType) {
         log_transmit_initiated(&self.driver.to_string());
         self.driver.send(packet).await;
-        // log_transmit_error(&self.driver.to_string(), &err.to_string())
     }
 
     async fn listen(&mut self) -> Option<PacketType> {

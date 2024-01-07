@@ -3,9 +3,7 @@ use std::sync::Arc;
 
 use super::abstract_driver::Driver;
 use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_packet, log_driver_creation};
-use crate::utils::mavlink_utils::{
-    create_groundstation_mavlink, create_mavlink, mavlink_receive_blcoking, mavlink_send,
-};
+use crate::utils::mavlink_utils::{create_groundstation_mavlink, create_mavlink, mavlink_receive_async, mavlink_send};
 use crate::utils::types::{MavDevice, MavFramePacket, NodeType};
 
 pub const UDP_DRIVER: &str = "udp_driver";
@@ -47,7 +45,8 @@ impl Driver<MavFramePacket> for UDPDriver {
 
     async fn receive(&self) -> Option<MavFramePacket> {
         let mavlink = self.driver_instance.clone();
-        if let Some(mavlink_frame) = mavlink_receive_blcoking(&mavlink) {
+
+        if let Some(mavlink_frame) = mavlink_receive_async(mavlink).await {
             log_debug_receive_packet(UDP_DRIVER, &mavlink_frame, None);
             return Some(mavlink_frame);
         }
