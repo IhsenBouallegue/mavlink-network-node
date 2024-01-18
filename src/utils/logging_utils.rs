@@ -5,6 +5,7 @@ use serde::Serialize;
 use serde_json::to_value;
 use tracing::{debug, error, info};
 use tracing_appender::rolling::{self, RollingFileAppender};
+use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, EnvFilter, Registry};
 
@@ -29,8 +30,13 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
     let (non_blocking_file_writer, _guard) = tracing_appender::non_blocking(file_appender);
 
     let filter_layer = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    let file_layer = fmt::layer().json().with_writer(non_blocking_file_writer);
-    let stdout_layer = fmt::layer().with_writer(std::io::stdout);
+    let file_layer = fmt::layer()
+        .json()
+        .with_writer(non_blocking_file_writer)
+        .with_span_events(FmtSpan::CLOSE);
+    let stdout_layer = fmt::layer()
+        .with_writer(std::io::stdout)
+        .with_span_events(FmtSpan::CLOSE);
 
     let subscriber = Registry::default()
         .with(filter_layer)

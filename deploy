@@ -10,7 +10,7 @@ readonly NODE_TYPE=$2
 
 readonly TARGET_USER=node
 readonly PROJECT=mavlink-network-node
-readonly TARGET_HOST=${TARGET_USER}@${TARGET_ADDRESS}.local
+readonly TARGET_HOST=${TARGET_USER}@${TARGET_ADDRESS}
 
 readonly TARGET_PATH=/home/${TARGET_USER}/${PROJECT}
 readonly TARGET_ARCH=aarch64-unknown-linux-gnu

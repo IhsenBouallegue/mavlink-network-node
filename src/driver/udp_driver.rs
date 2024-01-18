@@ -37,15 +37,28 @@ impl Driver<MavFramePacket> for UDPDriver {
         }
     }
 
+    #[tracing::instrument(
+        skip(self),
+        level = "debug",
+        target = "network",
+        name = "Transmitting",
+        fields(packet_to_send, driver = UDP_DRIVER)
+    )]
     async fn send(&self, packet_to_send: MavFramePacket) {
         let mavlink = self.driver_instance.clone();
         log_debug_send_packet(&self.to_string(), &packet_to_send);
         mavlink_send(&mavlink, &packet_to_send)
     }
 
+    #[tracing::instrument(
+        skip(self),
+        level = "debug",
+        target = "network",
+        name = "Receiving",
+        fields(packet_to_send, driver = UDP_DRIVER)
+    )]
     async fn receive(&self) -> Option<MavFramePacket> {
         let mavlink = self.driver_instance.clone();
-
         if let Some(mavlink_frame) = mavlink_receive_async(mavlink).await {
             log_debug_receive_packet(UDP_DRIVER, &mavlink_frame, None);
             return Some(mavlink_frame);

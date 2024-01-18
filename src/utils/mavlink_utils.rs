@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use mavlink::ardupilotmega::MavMessage;
 use mavlink::MavHeader;
@@ -9,7 +9,7 @@ use super::logging_utils::{log_packet_receive_error, log_packet_transmit_error};
 use super::types::{MavDevice, MavFramePacket, NodeType};
 use crate::driver::udp_driver::UDP_DRIVER;
 
-const GROUNDSATION_IP: &str = "192.168.1.150";
+// const GROUNDSATION_IP: &str = "192.168.1.150";
 const QGROUNDCONTROL_PORT: &str = "14550";
 
 const DRONE_IP: &str = "192.168.0.4";
@@ -17,14 +17,17 @@ const DRONE_PORT: &str = "14540";
 
 /// Create mavlink connection from flight computer to compagnion computer
 pub fn create_mavlink() -> MavDevice {
-    let mavconn = mavlink::connect::<MavMessage>(format!("udpout:{}:{}", DRONE_IP, DRONE_PORT).as_str()).unwrap();
+    let mut mavconn = mavlink::connect::<MavMessage>(format!("udpout:{}:{}", DRONE_IP, DRONE_PORT).as_str()).unwrap();
+    mavconn.set_protocol_version(mavlink::MavlinkVersion::V2);
+
     mavconn
 }
 
 /// Create mavlink connection from groundstation
 pub fn create_groundstation_mavlink() -> MavDevice {
     let mut mavconn =
-        mavlink::connect::<MavMessage>(format!("udpout:{}:{}", GROUNDSATION_IP, QGROUNDCONTROL_PORT).as_str()).unwrap();
+        mavlink::connect::<MavMessage>(format!("udpbcast:{}:{}", "192.168.1.255", QGROUNDCONTROL_PORT).as_str())
+            .unwrap();
     mavconn.set_protocol_version(mavlink::MavlinkVersion::V2);
     mavconn
 }
@@ -33,10 +36,10 @@ pub fn create_groundstation_mavlink() -> MavDevice {
 pub fn heartbeat_message() -> MavMessage {
     MavMessage::HEARTBEAT(mavlink::ardupilotmega::HEARTBEAT_DATA {
         custom_mode: 0,
-        mavtype: mavlink::ardupilotmega::MavType::MAV_TYPE_QUADROTOR,
-        autopilot: mavlink::ardupilotmega::MavAutopilot::MAV_AUTOPILOT_ARDUPILOTMEGA,
+        mavtype: mavlink::ardupilotmega::MavType::MAV_TYPE_GCS,
+        autopilot: mavlink::ardupilotmega::MavAutopilot::MAV_AUTOPILOT_INVALID,
         base_mode: mavlink::ardupilotmega::MavModeFlag::empty(),
-        system_status: mavlink::ardupilotmega::MavState::MAV_STATE_STANDBY,
+        system_status: mavlink::ardupilotmega::MavState::MAV_STATE_UNINIT,
         mavlink_version: 0x3,
     })
 }
@@ -128,7 +131,7 @@ impl MavlinkHeaderGenerator {
         MavHeader {
             sequence: sequence as u8,
             system_id: system_id,
-            component_id: 0,
+            component_id: 1,
         }
     }
 

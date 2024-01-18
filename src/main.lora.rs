@@ -10,7 +10,7 @@ use tokio::time::sleep;
 use tracing::info;
 use utils::logging_utils::init_logging;
 use utils::lora_utils::{create_lora, create_spi, lora_receive, lora_transmit};
-use utils::mavlink_utils::create_mavlink_heartbeat_frame;
+use utils::mavlink_utils::MavlinkHeaderGenerator;
 use utils::types::NodeType;
 
 #[tokio::main]
@@ -28,8 +28,9 @@ async fn main() {
             let (tx, mut rx) = mpsc::channel(32);
 
             tokio::spawn(async move {
+                let generator = MavlinkHeaderGenerator::new();
                 loop {
-                    tx.send(create_mavlink_heartbeat_frame()).await.unwrap();
+                    tx.send(generator.create_mavlink_heartbeat_frame()).await.unwrap();
                     sleep(Duration::from_secs(3)).await;
                 }
             });
@@ -52,8 +53,10 @@ async fn main() {
             let (tx, mut rx) = mpsc::channel(32);
 
             tokio::spawn(async move {
+                let generator = MavlinkHeaderGenerator::new();
+
                 loop {
-                    tx.send(create_mavlink_heartbeat_frame()).await.unwrap();
+                    tx.send(generator.create_mavlink_heartbeat_frame()).await.unwrap();
                     sleep(Duration::from_secs(3)).await;
                 }
             });
