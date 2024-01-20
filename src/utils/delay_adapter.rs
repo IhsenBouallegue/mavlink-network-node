@@ -16,8 +16,6 @@ where
 {
     #[inline]
     async fn delay_ns(&mut self, ns: u32) {
-        async { T::delay_ns(&mut self.wrapped, ns) }
-            .into_future()
-            .await;
+        async { T::delay_ns(&mut self.wrapped, ns) }.into_future().await;
     }
 }

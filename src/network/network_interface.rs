@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use serde::Serialize;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::sync::Mutex;
 
 use crate::driver::abstract_driver::Driver;
 use crate::utils::logging_utils::{
@@ -54,13 +53,13 @@ where
         log_network_interface_running(&self.driver.to_string());
         loop {
             tokio::select! {
-                Some(packet) = self.to_send.recv() => {
-                    self.transmit(packet).await;
-                }
                 Some(packet) = self.driver.receive() => {
                     log_listen_initiated(&self.driver.to_string());
                     self.received.send(packet).await.unwrap();
                     log_debug_send_to_main(&self.driver.to_string());
+                }
+                Some(packet) = self.to_send.recv() => {
+                    self.transmit(packet).await;
                 }
             }
         }

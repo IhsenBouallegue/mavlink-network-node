@@ -1,5 +1,3 @@
-extern crate sx127x_lora;
-
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 
@@ -22,7 +20,7 @@ const LORA_CS_PIN: u8 = 25;
 const LORA_RESET_PIN: u8 = 17;
 const LORA_DIO0_PIN: u8 = 4;
 // const LORA_BUSY_PIN: u8 = 11;
-const LORA_FREQUENCY_IN_HZ: u32 = 868_000_000;
+const LORA_FREQUENCY_IN_HZ: u32 = 869_525_000;
 
 pub fn create_spi() -> Result<SpiDevice, Box<dyn Error>> {
     let gpio = Gpio::new().unwrap();
@@ -44,13 +42,13 @@ pub async fn create_lora(spi: SpiDevice) -> Result<LoRaDevice, Box<dyn Error>> {
     };
     let iv = GenericSx127xInterfaceVariant::new(reset, dio0, None, None).unwrap();
 
-    let mut lora = LoRa::new(SX1276_7_8_9::new(spi, iv, config), false, WithDelayNs::new(Delay))
+    let lora = LoRa::new(SX1276_7_8_9::new(spi, iv, config), false, WithDelayNs::new(Delay))
         .await
         .unwrap();
 
-    let mdltn_params = create_modulation_params(&mut lora).unwrap();
-    let rx_pkt_params = create_rx_packet_params(&mut lora, &mdltn_params).unwrap();
-    prepare_for_rx(&mut lora, &mdltn_params, &rx_pkt_params).await;
+    // let mdltn_params = create_modulation_params(&mut lora).unwrap();
+    // let rx_pkt_params = create_rx_packet_params(&mut lora, &mdltn_params).unwrap();
+    // prepare_for_rx(&mut lora, &mdltn_params, &rx_pkt_params).await;
     // prepare_for_tx(&mut lora, &mdltn_params).await;
     Ok(lora)
 }
@@ -85,15 +83,31 @@ pub struct LoRaReceiveResult {
     pub rssi: i16,
 }
 
-// #[tracing::instrument(
-//     skip(lora),
-//     level = "debug",
-//     target = "network",
-//     name = "Receiving",
-//     fields(driver = LORA_DRIVER)
-// )]
 pub async fn lora_receive(lora: Arc<Mutex<LoRaDevice>>) -> Option<LoRaReceiveResult> {
     let lora = &mut lora.lock().unwrap();
+    let mdltn_params = create_modulation_params(lora).unwrap();
+    let rx_pkt_params = create_rx_packet_params(lora, &mdltn_params).unwrap();
+    prepare_for_rx(lora, &mdltn_params, &rx_pkt_params).await;
+
+    let mut receiving_buffer = [00u8; 255];
+    loop {
+        match lora.rx(&rx_pkt_params, &mut receiving_buffer).await {
+            Ok((received_len, rx_pkt_status)) => {
+                let received_data = Vec::from(&receiving_buffer[..received_len as usize]);
+                return Some(LoRaReceiveResult {
+                    buffer: received_data,
+                    rssi: rx_pkt_status.rssi,
+                });
+            }
+            Err(err) => {
+                println!("rx unsuccessful = {:?}", err);
+                return None;
+            }
+        }
+    }
+}
+
+pub async fn lora_recv(lora: &mut LoRaDevice) -> Option<LoRaReceiveResult> {
     let mdltn_params = create_modulation_params(lora).unwrap();
     let rx_pkt_params = create_rx_packet_params(lora, &mdltn_params).unwrap();
     prepare_for_rx(lora, &mdltn_params, &rx_pkt_params).await;
@@ -102,14 +116,14 @@ pub async fn lora_receive(lora: Arc<Mutex<LoRaDevice>>) -> Option<LoRaReceiveRes
     match lora.rx(&rx_pkt_params, &mut receiving_buffer).await {
         Ok((received_len, rx_pkt_status)) => {
             let received_data = Vec::from(&receiving_buffer[..received_len as usize]);
-            Some(LoRaReceiveResult {
+            return Some(LoRaReceiveResult {
                 buffer: received_data,
                 rssi: rx_pkt_status.rssi,
-            })
+            });
         }
         Err(err) => {
             println!("rx unsuccessful = {:?}", err);
-            None
+            return None;
         }
     }
 }
@@ -121,7 +135,7 @@ pub async fn lora_receive(lora: Arc<Mutex<LoRaDevice>>) -> Option<LoRaReceiveRes
     name = "Prepare For TX",
     fields(driver = LORA_DRIVER)
 )]
-async fn prepare_for_tx(lora: &mut LoRaDevice, mdltn_params: &ModulationParams) {
+pub async fn prepare_for_tx(lora: &mut LoRaDevice, mdltn_params: &ModulationParams) {
     match lora.prepare_for_tx(mdltn_params, 20, true).await {
         Ok(()) => {}
         Err(err) => {
@@ -131,7 +145,7 @@ async fn prepare_for_tx(lora: &mut LoRaDevice, mdltn_params: &ModulationParams) 
     };
 }
 
-fn create_tx_packet_params(lora: &mut LoRaDevice, mdltn_params: &ModulationParams) -> PacketParams {
+pub fn create_tx_packet_params(lora: &mut LoRaDevice, mdltn_params: &ModulationParams) -> PacketParams {
     lora.create_tx_packet_params(4, false, true, false, mdltn_params)
         .unwrap()
 }
@@ -143,8 +157,11 @@ fn create_tx_packet_params(lora: &mut LoRaDevice, mdltn_params: &ModulationParam
     name = "Prepare For RX",
     fields(driver = LORA_DRIVER)
 )]
-async fn prepare_for_rx(lora: &mut LoRaDevice, mdltn_params: &ModulationParams, rx_pkt_params: &PacketParams) {
-    match lora.prepare_for_rx(mdltn_params, rx_pkt_params, None, None, true).await {
+pub async fn prepare_for_rx(lora: &mut LoRaDevice, mdltn_params: &ModulationParams, rx_pkt_params: &PacketParams) {
+    match lora
+        .prepare_for_rx(lora_phy::RxMode::Continuous, mdltn_params, rx_pkt_params, true)
+        .await
+    {
         Ok(()) => {}
         Err(err) => {
             println!("Radio error = {:?}", err);
@@ -153,9 +170,12 @@ async fn prepare_for_rx(lora: &mut LoRaDevice, mdltn_params: &ModulationParams, 
     };
 }
 
-fn create_rx_packet_params(lora: &mut LoRaDevice, mdltn_params: &ModulationParams) -> Result<PacketParams, RadioError> {
+pub fn create_rx_packet_params(
+    lora: &mut LoRaDevice,
+    mdltn_params: &ModulationParams,
+) -> Result<PacketParams, RadioError> {
     let rx_pkt_params = {
-        match lora.create_rx_packet_params(4, false, 100 as u8, true, false, &mdltn_params) {
+        match lora.create_rx_packet_params(4, false, 255 as u8, true, false, &mdltn_params) {
             Ok(pp) => pp,
             Err(err) => {
                 println!("Radio error = {:?}", err);
@@ -168,8 +188,8 @@ fn create_rx_packet_params(lora: &mut LoRaDevice, mdltn_params: &ModulationParam
 
 pub fn create_modulation_params(lora: &mut LoRaDevice) -> Result<ModulationParams, RadioError> {
     lora.create_modulation_params(
-        SpreadingFactor::_10,
-        Bandwidth::_500KHz,
+        SpreadingFactor::_7,
+        Bandwidth::_250KHz,
         CodingRate::_4_8,
         LORA_FREQUENCY_IN_HZ,
     )
