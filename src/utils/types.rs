@@ -13,8 +13,8 @@ use super::iv::GenericSx127xInterfaceVariant;
 
 pub type SpiDevice = ExclusiveDevice<BlockingAsync<Spi>, OutputPin, WithDelayNs<Delay>>;
 
-pub type LoRaDevice =
-    LoRa<SX1276_7_8_9<SpiDevice, GenericSx127xInterfaceVariant<OutputPin, InputPin>>, WithDelayNs<Delay>>;
+pub type RadioType = SX1276_7_8_9<SpiDevice, GenericSx127xInterfaceVariant<OutputPin, InputPin>>;
+pub type LoRaDevice = LoRa<RadioType, WithDelayNs<Delay>>;
 
 pub type MavDevice = Box<dyn MavConnection<MavMessage> + Send + Sync>;
 

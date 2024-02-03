@@ -29,26 +29,27 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
     let file_appender = RollingFileAppender::new(rolling::Rotation::NEVER, "./logs", &file_name);
     let (non_blocking_file_writer, _guard) = tracing_appender::non_blocking(file_appender);
 
-    let console_layer = console_subscriber::ConsoleLayer::builder()
-        .server_addr(([127, 0, 0, 1], 5555))
-        .spawn();
+    // let console_layer = console_subscriber::ConsoleLayer::builder()
+    //     .server_addr(([127, 0, 0, 1], 5555))
+    //     .spawn();
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info"))
-        .add_directive("tokio=trace".parse().unwrap())
-        .add_directive("runtime=trace".parse().unwrap());
-    // let file_layer = fmt::layer()
-    //     .json()
-    //     .with_writer(non_blocking_file_writer)
-    //     .with_span_events(FmtSpan::CLOSE);
+        .add_directive("lora_phy=error".parse().unwrap());
+    // .add_directive("tokio=trace".parse().unwrap())
+    // .add_directive("runtime=trace".parse().unwrap());
+    let file_layer = fmt::layer()
+        .json()
+        .with_writer(non_blocking_file_writer)
+        .with_span_events(FmtSpan::CLOSE);
     let stdout_layer = fmt::layer()
         .with_writer(std::io::stdout)
         .with_span_events(FmtSpan::CLOSE);
 
     let subscriber = Registry::default()
         .with(filter_layer)
-        // .with(file_layer)
-        .with(stdout_layer)
-        .with(console_layer);
+        .with(file_layer)
+        .with(stdout_layer);
+    // .with(console_layer);
 
     tracing::subscriber::set_global_default(subscriber).expect("Unable to set global subscriber");
 

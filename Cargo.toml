@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 mavlink = { version = "0.12.2", features = ["serde"] }
 rppal = { path = "../rppal", features = ["hal"] }
-lora-phy = { git = "https://github.com/lora-rs/lora-rs.git", rev = "258ce4bbcb2e71075e52db91f4600f43641059b3" }
+lora-phy = { path = "../lora-rs/lora-phy" }
 tokio = { version = "1.15", features = ["full", "tracing"] }
 embedded-hal-bus = { version = "0.1.0", features = ["async", "std"] }
 embedded-hal = { version = "1" }

@@ -742,18 +742,17 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 [[package]]
 name = "lora-modulation"
 version = "0.1.4"
-source = "git+https://github.com/lora-rs/lora-rs.git?rev=258ce4bbcb2e71075e52db91f4600f43641059b3#258ce4bbcb2e71075e52db91f4600f43641059b3"
 
 [[package]]
 name = "lora-phy"
 version = "3.0.0-alpha.3"
-source = "git+https://github.com/lora-rs/lora-rs.git?rev=258ce4bbcb2e71075e52db91f4600f43641059b3#258ce4bbcb2e71075e52db91f4600f43641059b3"
 dependencies = [
  "defmt",
  "embedded-hal 1.0.0",
  "embedded-hal-async",
  "lora-modulation",
  "num-traits",
+ "tracing",
 ]
 
 [[package]]
