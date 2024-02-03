@@ -133,7 +133,11 @@ async fn main() {
                         lora.prepare_for_rx(lora_phy::RxMode::Continuous, &mdltn_params, &rx_pkt_params, true).await.unwrap();
                         tokio::select! {
                             Some(packet) = received_udp_rx.recv() => {
+                                prepare_for_tx(&mut lora, &mdltn_params).await;
                                 lora_trans(&mut lora, &packet, &mdltn_params, &mut tx_pkt_params).await;
+                                while let Ok(Some(packet)) = tokio::time::timeout(Duration::from_millis(1), received_udp_rx.recv()).await {
+                                    lora_trans(&mut lora, &packet, &mdltn_params, &mut tx_pkt_params).await;
+                                }
                             }
                             Ok(_) = lora.wait_for_irq() => {
                                 if let Ok(Some(TargetIrqState::Done)) = lora.process_irq_event(TargetIrqState::Done).await {
