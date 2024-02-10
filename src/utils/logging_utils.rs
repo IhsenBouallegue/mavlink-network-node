@@ -9,6 +9,8 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, EnvFilter, Registry};
 
+use super::websocket_layer::WebSocketMakeWriter;
+
 // Constants for log messages
 const PACKET_TRANSMIT_ERROR_MSG: &str = "Packet transmit failed";
 const PACKET_RECEIVE_ERROR_MSG: &str = "Packet receive failed";
@@ -26,7 +28,7 @@ const NETWORK_INTERFACE_RUNNING_MSG: &str = "Running network interface";
 // Initialization of the logging system
 pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
     let file_name = format!("logs_{}.json", Utc::now().format("%Y-%m-%d_%H-%M-%S%.3f"));
-    let file_appender = RollingFileAppender::new(rolling::Rotation::NEVER, "./logs", &file_name);
+    let file_appender: RollingFileAppender = RollingFileAppender::new(rolling::Rotation::NEVER, "./logs", &file_name);
     let (non_blocking_file_writer, _guard) = tracing_appender::non_blocking(file_appender);
 
     // let console_layer = console_subscriber::ConsoleLayer::builder()
@@ -42,13 +44,19 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
         .with_writer(non_blocking_file_writer)
         .with_span_events(FmtSpan::CLOSE);
     let stdout_layer = fmt::layer()
+        .pretty()
         .with_writer(std::io::stdout)
+        .with_span_events(FmtSpan::CLOSE);
+    let websocket_layer = fmt::layer()
+        .json()
+        .with_writer(WebSocketMakeWriter::new())
         .with_span_events(FmtSpan::CLOSE);
 
     let subscriber = Registry::default()
         .with(filter_layer)
         .with(file_layer)
-        .with(stdout_layer);
+        .with(stdout_layer)
+        .with(websocket_layer);
     // .with(console_layer);
 
     tracing::subscriber::set_global_default(subscriber).expect("Unable to set global subscriber");

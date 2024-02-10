@@ -5,9 +5,10 @@ use embedded_hal_bus::spi::ExclusiveDevice;
 use lora_phy::mod_params::{Bandwidth, CodingRate, ModulationParams, PacketParams, RadioError, SpreadingFactor};
 use lora_phy::sx1276_7_8_9::{self, SX1276_7_8_9};
 use lora_phy::LoRa;
-use rppal::gpio::Gpio;
+use rppal::gpio::{Gpio, Trigger};
 use rppal::hal::Delay;
 use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
+use tokio::sync::mpsc;
 
 use super::adapter::BlockingAsync;
 use super::delay_adapter::WithDelayNs;
@@ -33,7 +34,12 @@ pub fn create_spi() -> Result<SpiDevice, Box<dyn Error>> {
 pub async fn create_lora(spi: SpiDevice) -> Result<LoRaDevice, Box<dyn Error>> {
     let gpio = Gpio::new().unwrap();
     let mut reset = gpio.get(LORA_RESET_PIN).unwrap().into_output();
-    let dio0 = gpio.get(LORA_DIO0_PIN).unwrap().into_input_pullup();
+    let mut dio0: rppal::gpio::InputPin = gpio.get(LORA_DIO0_PIN).unwrap().into_input_pullup();
+    let (interrupt_tx, interrupt_rx) = mpsc::channel(3);
+
+    let _ = dio0.set_async_interrupt(Trigger::RisingEdge, move |_| {
+        interrupt_tx.try_send(()).unwrap();
+    });
 
     reset.set_high();
     tokio::time::sleep(std::time::Duration::from_micros(100)).await;
@@ -44,7 +50,7 @@ pub async fn create_lora(spi: SpiDevice) -> Result<LoRaDevice, Box<dyn Error>> {
         chip: sx1276_7_8_9::Sx127xVariant::Sx1276,
         tcxo_used: false,
     };
-    let iv = GenericSx127xInterfaceVariant::new(reset, dio0, None, None).unwrap();
+    let iv = GenericSx127xInterfaceVariant::new(reset, dio0, None, None, interrupt_rx).unwrap();
 
     let lora = LoRa::new(SX1276_7_8_9::new(spi, iv, config), false, WithDelayNs::new(Delay))
         .await

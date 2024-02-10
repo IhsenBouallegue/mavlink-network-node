@@ -128,15 +128,21 @@ async fn main() {
                     let mdltn_params = create_modulation_params(&mut lora).unwrap();
                     let rx_pkt_params = create_rx_packet_params(&mut lora, &mdltn_params).unwrap();
                     let mut tx_pkt_params = create_tx_packet_params(&mut lora, &mdltn_params);
-
+                    const CONTINOUS_TRANSMISSION_PACKET_LIMIT: u8 = 3;
                     loop {
                         lora.prepare_for_rx(lora_phy::RxMode::Continuous, &mdltn_params, &rx_pkt_params, true).await.unwrap();
                         tokio::select! {
                             Some(packet) = received_udp_rx.recv() => {
                                 prepare_for_tx(&mut lora, &mdltn_params).await;
                                 lora_trans(&mut lora, &packet, &mdltn_params, &mut tx_pkt_params).await;
-                                while let Ok(Some(packet)) = tokio::time::timeout(Duration::from_millis(1), received_udp_rx.recv()).await {
+                                let mut continous_transmission_packet_count: u8 = 0;
+                                while let Ok(Some(packet)) = tokio::time::timeout(Duration::from_millis(2), received_udp_rx.recv()).await
+                                {
+                                    if continous_transmission_packet_count >= CONTINOUS_TRANSMISSION_PACKET_LIMIT {
+                                        break;
+                                    }
                                     lora_trans(&mut lora, &packet, &mdltn_params, &mut tx_pkt_params).await;
+                                    continous_transmission_packet_count += 1;
                                 }
                             }
                             Ok(_) = lora.wait_for_irq() => {

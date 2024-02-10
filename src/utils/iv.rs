@@ -4,6 +4,7 @@ use embedded_hal_async::digital::Wait;
 use lora_phy::mod_params::RadioError;
 use lora_phy::mod_params::RadioError::*;
 use lora_phy::mod_traits::InterfaceVariant;
+use tokio::sync::mpsc::Receiver;
 
 /// Base for the InterfaceVariant implementation for a generic Sx126x LoRa board
 pub struct GenericSx127xInterfaceVariant<CTRL, WAIT> {
@@ -11,6 +12,7 @@ pub struct GenericSx127xInterfaceVariant<CTRL, WAIT> {
     dio0: WAIT,
     rf_switch_rx: Option<CTRL>,
     rf_switch_tx: Option<CTRL>,
+    interrupt_rx: Receiver<()>,
 }
 
 impl<CTRL, WAIT> GenericSx127xInterfaceVariant<CTRL, WAIT>
@@ -18,18 +20,20 @@ where
     CTRL: OutputPin,
     WAIT: Wait,
 {
-    /// Create an InterfaceVariant instance for an nrf52840/sx1262 combination
     pub fn new(
         reset: CTRL,
         dio0: WAIT,
         rf_switch_rx: Option<CTRL>,
         rf_switch_tx: Option<CTRL>,
+        interrupt_rx: Receiver<()>,
     ) -> Result<Self, RadioError> {
+        // dio0.set_async_interrupt(trigger, callback)
         Ok(Self {
             reset,
             dio0,
             rf_switch_rx,
             rf_switch_tx,
+            interrupt_rx,
         })
     }
 }
@@ -51,7 +55,8 @@ where
         Ok(())
     }
     async fn await_irq(&mut self) -> Result<(), RadioError> {
-        self.dio0.wait_for_high().await.map_err(|_| DIO1)?;
+        // self.dio0.wait_for_high().await.map_err(|_| DIO1)?;
+        self.interrupt_rx.recv().await;
         Ok(())
     }
 
