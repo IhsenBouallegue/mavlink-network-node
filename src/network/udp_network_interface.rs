@@ -7,7 +7,12 @@ use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::task::JoinHandle;
 use tracing::{error, info};
 
-use super::types::MavFramePacket;
+use crate::driver::udp_driver::UDP_DRIVER;
+use crate::utils::logging_utils::{
+    log_debug_receive_packet, log_debug_send_packet, log_debug_send_to_main, log_packet_received, log_packet_sent,
+};
+use crate::utils::types::MavFramePacket;
+
 pub struct UDPNetworkInterface {
     send_channel: Sender<MavFramePacket>,
     recv_channel: Receiver<MavFramePacket>,
@@ -48,24 +53,23 @@ impl UDPNetworkInterface {
                         Ok((size, src_addr)) => {
                             let received_data = Vec::from(&buf[..size]);
                             if let Some(mavlink_frame) = deserialize_frame(&received_data[..]) {
-                                info!(
-                                    size = size,
-                                    src_addr = src_addr.to_string(),
-                                    message_type = &mavlink_frame.msg.message_name(),
-                                    message_seq = mavlink_frame.header.sequence,
-                                    "Received packet",
-                                );
+                                // log_packet_received(size, Some(src_addr), &mavlink_frame, UDP_DRIVER);
+                                log_debug_receive_packet(UDP_DRIVER, &mavlink_frame, None);
                                 if mavlink_frame.msg.message_id() == 30
                                     || mavlink_frame.msg.message_id() == 141
                                     || mavlink_frame.msg.message_id() == 74
                                     || mavlink_frame.msg.message_id() == 410
                                 {
-                                    info!("Message ignored");
+                                    // info!("Message ignored");
                                     continue;
                                 }
+
                                 match send_channel.try_send(mavlink_frame) {
                                     Err(mpsc::error::TrySendError::Full(_)) => {
                                         error!("Send channel is full, dropping packet.");
+                                    }
+                                    Ok(_) => {
+                                        log_debug_send_to_main(UDP_DRIVER);
                                     }
                                     _ => {}
                                 }
@@ -85,14 +89,8 @@ impl UDPNetworkInterface {
                 while let Some(packet) = recv_channel.recv().await {
                     let cloned_packet = packet.clone();
                     let raw_frame = serialize_frame(cloned_packet);
-                    info!(
-                        size = raw_frame.len(),
-                        dest_addr = &dest_addr,
-                        message_type = &packet.msg.message_name(),
-                        message_seq = packet.header.sequence,
-                        "Sending packet",
-                    );
-
+                    // log_packet_sent(raw_frame.len(), Some(&dest_addr), &packet, UDP_DRIVER);
+                    log_debug_send_packet(UDP_DRIVER, &packet);
                     let _ = socket_send.send_to(&raw_frame, &dest_addr).await;
                 }
             })

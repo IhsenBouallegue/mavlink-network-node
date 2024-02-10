@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use chrono::Utc;
+use mavlink::Message;
 use serde::Serialize;
 use serde_json::to_value;
 use tracing::{debug, error, info};
@@ -9,7 +10,9 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, EnvFilter, Registry};
 
+use super::types::MavFramePacket;
 use super::websocket_layer::WebSocketMakeWriter;
+use crate::driver;
 
 // Constants for log messages
 const PACKET_TRANSMIT_ERROR_MSG: &str = "Packet transmit failed";
@@ -69,6 +72,41 @@ pub fn log_packet_transmit_error<Packet: Debug>(driver: &str, packet: &Packet, e
 // Log an error during packet receiving with ERROR level
 pub fn log_packet_receive_error(driver: &str, error: &str) {
     error!(target: "network", driver, %error, "{}", PACKET_RECEIVE_ERROR_MSG);
+}
+
+pub fn log_packet_received(
+    size: usize,
+    src_addr: Option<std::net::SocketAddr>,
+    mavlink_frame: &MavFramePacket,
+    driver: &str,
+) {
+    info!(
+        target: "network",
+        driver,
+        size = size,
+        src_addr = match src_addr {
+            Some(addr) => Some(addr.to_string()),
+            None => None,
+        },
+        message_type = &mavlink_frame.msg.message_name(),
+        message_seq = mavlink_frame.header.sequence,
+        "{}",
+        RECEIVE_PACKET_MSG,
+    );
+}
+pub fn log_packet_sent(size: usize, dest_addr: Option<&str>, packet: &MavFramePacket, driver: &str) {
+    info!(
+        target: "network",
+        driver,
+        size,
+        dest_addr = match dest_addr {
+            Some(addr) => Some(addr.to_string()),
+            None => None,
+        },
+        message_type = &packet.msg.message_name(),
+        message_seq = packet.header.sequence,
+        "Sending packet",
+    );
 }
 
 // Log the contents of a packet being sent with DEBUG level

@@ -5,13 +5,12 @@ mod utils;
 use std::env;
 
 use driver::udp_driver::UDP_DRIVER;
+use network::lora_network_interface::LoRaNetworkInterface;
+use network::udp_network_interface::UDPNetworkInterface;
 use tokio::sync::mpsc;
 use utils::logging_utils::{init_logging, log_debug_send_to_network};
 use utils::mavlink_utils::MavlinkHeaderGenerator;
 use utils::types::{MavFramePacket, NodeType};
-use utils::udp_network_interface::UDPNetworkInterface;
-
-use crate::driver::lora_network_interface::LoRaNetworkInterface;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
