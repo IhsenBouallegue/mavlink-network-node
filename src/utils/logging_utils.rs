@@ -43,10 +43,7 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
         .json()
         .with_writer(non_blocking_file_writer)
         .with_span_events(FmtSpan::CLOSE);
-    let stdout_layer = fmt::layer()
-        .pretty()
-        .with_writer(std::io::stdout)
-        .with_span_events(FmtSpan::CLOSE);
+    let stdout_layer = fmt::layer().pretty().with_writer(std::io::stdout);
     let websocket_layer = fmt::layer()
         .json()
         .with_writer(WebSocketMakeWriter::new())
