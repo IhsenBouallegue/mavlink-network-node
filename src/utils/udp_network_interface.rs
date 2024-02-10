@@ -4,21 +4,22 @@ use std::sync::Arc;
 use mavlink::{read_versioned_msg, MAVLinkV2MessageRaw, Message as MavMessage};
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::task::JoinHandle;
 use tracing::{error, info};
 
 use super::types::MavFramePacket;
-pub struct UdpComm {
+pub struct UDPNetworkInterface {
     send_channel: Sender<MavFramePacket>,
     recv_channel: Receiver<MavFramePacket>,
 }
 
-impl UdpComm {
+impl UDPNetworkInterface {
     pub fn new(buffer_size: usize) -> (Self, Sender<MavFramePacket>, Receiver<MavFramePacket>) {
         let (tx_send, rx_send) = mpsc::channel(buffer_size);
         let (tx_recv, rx_recv) = mpsc::channel(buffer_size);
 
         (
-            UdpComm {
+            UDPNetworkInterface {
                 send_channel: tx_send,
                 recv_channel: rx_recv,
             },
@@ -27,7 +28,7 @@ impl UdpComm {
         )
     }
 
-    pub async fn run(self, addr: &str, dest_addr: &str, broadcast: bool) {
+    pub async fn run(self, addr: &str, dest_addr: &str, broadcast: bool) -> (JoinHandle<()>, JoinHandle<()>) {
         let dest_addr = dest_addr.to_string();
         let socket = Arc::new(UdpSocket::bind(addr).await.unwrap());
         socket.set_broadcast(broadcast).expect("Failed to enable broadcast");
@@ -37,7 +38,7 @@ impl UdpComm {
 
         // Receiving task
         let send_channel = self.send_channel;
-        tokio::task::Builder::new()
+        let recv_task = tokio::task::Builder::new()
             .name("udp recv")
             .spawn(async move {
                 loop {
@@ -78,7 +79,7 @@ impl UdpComm {
 
         // Sending task
         let mut recv_channel = self.recv_channel;
-        tokio::task::Builder::new()
+        let send_task = tokio::task::Builder::new()
             .name("udp send")
             .spawn(async move {
                 while let Some(packet) = recv_channel.recv().await {
@@ -96,6 +97,8 @@ impl UdpComm {
                 }
             })
             .unwrap();
+
+        (recv_task, send_task)
     }
 }
 

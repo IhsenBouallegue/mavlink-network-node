@@ -5,5 +5,5 @@ pub mod logging_utils;
 pub mod lora_utils;
 pub mod mavlink_utils;
 pub mod types;
-pub mod udp_comm;
+pub mod udp_network_interface;
 pub mod websocket_layer;

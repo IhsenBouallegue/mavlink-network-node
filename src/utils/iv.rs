@@ -27,7 +27,6 @@ where
         rf_switch_tx: Option<CTRL>,
         interrupt_rx: Receiver<()>,
     ) -> Result<Self, RadioError> {
-        // dio0.set_async_interrupt(trigger, callback)
         Ok(Self {
             reset,
             dio0,

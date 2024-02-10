@@ -2,7 +2,7 @@ use tokio::time::sleep;
 use utils::logging_utils::init_logging;
 use utils::mavlink_utils::MavlinkHeaderGenerator;
 use utils::types::NodeType;
-use utils::udp_comm::UdpComm;
+use utils::udp_comm::UDPNetworkInterface;
 
 mod driver;
 mod network;
@@ -19,7 +19,7 @@ async fn main() {
         NodeType::Drone => {
             let addr = "0.0.0.0:0"; // Bind to all interfaces for receiving
             let discovery_addr = "192.168.0.255:14540";
-            let (udp_comm, sender, receiver) = UdpComm::new(100);
+            let (udp_comm, sender, receiver) = UDPNetworkInterface::new(100);
             udp_comm.run(addr, discovery_addr, true).await;
             let generator = MavlinkHeaderGenerator::new();
 
@@ -41,7 +41,7 @@ async fn main() {
         NodeType::Gateway => {
             let addr = "0.0.0.0:0"; // Bind to all interfaces for receiving
             let discovery_addr = "192.168.1.255:14550";
-            let (udp_comm, sender, receiver) = UdpComm::new(100);
+            let (udp_comm, sender, receiver) = UDPNetworkInterface::new(100);
             udp_comm.run(addr, discovery_addr, true).await;
 
             let udp_to_lora = tokio::task::Builder::new()
