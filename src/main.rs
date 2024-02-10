@@ -25,8 +25,8 @@ async fn main() {
             // Set up udp network with channels
             let addr = "0.0.0.0:0"; // Bind to all interfaces for receiving
             let discovery_addr = "192.168.0.255:14540";
-            let (udp_comm, udp_tx, udp_rx) = UDPNetworkInterface::new(100);
-            let (udp_recv_task, udp_send_task) = udp_comm.run(addr, discovery_addr, true).await;
+            let (udp_network_interface, udp_tx, udp_rx) = UDPNetworkInterface::new(100);
+            let (udp_recv_task, udp_send_task) = udp_network_interface.run(addr, discovery_addr, true).await;
             let lora_to_udp_tx = udp_tx.clone();
 
             let lora_network_interface = LoRaNetworkInterface::new_barebone(lora_to_udp_tx, udp_rx);
@@ -43,8 +43,8 @@ async fn main() {
             // Set up udp network with channels
             let addr = "0.0.0.0:0"; // Bind to all interfaces for receiving
             let discovery_addr = "192.168.1.255:14550";
-            let (udp_comm, udp_tx, udp_rx) = UDPNetworkInterface::new(100);
-            let (udp_recv_task, udp_send_task) = udp_comm.run(addr, discovery_addr, true).await;
+            let (udp_network_interface, udp_tx, udp_rx) = UDPNetworkInterface::new(100);
+            let (udp_recv_task, udp_send_task) = udp_network_interface.run(addr, discovery_addr, true).await;
             let lora_to_udp_tx = udp_tx.clone();
 
             let lora_network_interface = LoRaNetworkInterface::new_barebone(lora_to_udp_tx, udp_rx);
