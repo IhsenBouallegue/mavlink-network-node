@@ -1,5 +1,5 @@
 use embedded_hal_bus::spi::ExclusiveDevice;
-use lora_phy::sx1276_7_8_9::SX1276_7_8_9;
+use lora_phy::sx127x::Sx127x;
 use lora_phy::LoRa;
 use mavlink::ardupilotmega::MavMessage;
 use mavlink::{MavConnection, MavFrame};
@@ -13,7 +13,7 @@ use super::iv::GenericSx127xInterfaceVariant;
 
 pub type SpiDevice = ExclusiveDevice<BlockingAsync<Spi>, OutputPin, WithDelayNs<Delay>>;
 
-pub type RadioType = SX1276_7_8_9<SpiDevice, GenericSx127xInterfaceVariant<OutputPin, InputPin>>;
+pub type RadioType = Sx127x<SpiDevice, GenericSx127xInterfaceVariant<OutputPin, InputPin>>;
 pub type LoRaDevice = LoRa<RadioType, WithDelayNs<Delay>>;
 
 pub type MavDevice = Box<dyn MavConnection<MavMessage> + Send + Sync>;

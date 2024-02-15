@@ -2,10 +2,10 @@ use std::time::Duration;
 
 use lora_phy::mod_traits::TargetIrqState;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::{span, Instrument, Level};
+use tracing::{info, span, Instrument, Level};
 
 use crate::driver::lora_driver::LORA_DRIVER;
-use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_to_main, log_packet_received};
+use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_to_main};
 use crate::utils::lora_utils::{
     create_lora, create_modulation_params, create_rx_packet_params, create_spi, create_tx_packet_params, lora_trans,
     prepare_for_rx, prepare_for_tx,
@@ -77,7 +77,9 @@ impl LoRaNetworkInterface {
                     }
                     // Receive packets from LoRa
                     Ok(_) = lora.wait_for_irq().instrument(span!(Level::DEBUG, "Wait For IRQ", driver = LORA_DRIVER, target= "network")) => {
-                        if let Ok(Some(TargetIrqState::Done)) = lora.process_irq_event(TargetIrqState::PreambleReceived).await {
+                        info!("IRQ received");
+                        let target_irq_state = lora.process_irq_event(TargetIrqState::Done).await.unwrap();
+                        if let Some(TargetIrqState::Done) = target_irq_state {
                             let mut receiving_buffer = [00u8; 255];
                             let (received_len, rx_pkt_status) = lora.rx(&rx_pkt_params, &mut receiving_buffer).instrument(span!(Level::DEBUG, "Receiving", driver = LORA_DRIVER, target= "network")).await.unwrap();
                             let received_data = Vec::from(&receiving_buffer[..received_len as usize]);

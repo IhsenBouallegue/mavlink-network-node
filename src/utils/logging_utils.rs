@@ -12,7 +12,6 @@ use tracing_subscriber::{fmt, EnvFilter, Registry};
 
 use super::types::MavFramePacket;
 use super::websocket_layer::WebSocketMakeWriter;
-use crate::driver;
 
 // Constants for log messages
 const PACKET_TRANSMIT_ERROR_MSG: &str = "Packet transmit failed";

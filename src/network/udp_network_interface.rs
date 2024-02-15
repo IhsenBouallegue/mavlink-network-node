@@ -5,12 +5,10 @@ use mavlink::{read_versioned_msg, MAVLinkV2MessageRaw, Message as MavMessage};
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::task::JoinHandle;
-use tracing::{error, info};
+use tracing::error;
 
 use crate::driver::udp_driver::UDP_DRIVER;
-use crate::utils::logging_utils::{
-    log_debug_receive_packet, log_debug_send_packet, log_debug_send_to_main, log_packet_received, log_packet_sent,
-};
+use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_packet, log_debug_send_to_main};
 use crate::utils::types::MavFramePacket;
 
 pub struct UDPNetworkInterface {

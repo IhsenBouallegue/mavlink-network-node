@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use embedded_hal_bus::spi::ExclusiveDevice;
 use lora_phy::mod_params::{Bandwidth, CodingRate, ModulationParams, PacketParams, RadioError, SpreadingFactor};
-use lora_phy::sx1276_7_8_9::{self, SX1276_7_8_9};
+use lora_phy::sx127x::{Config, Sx127x, Sx127xVariant};
 use lora_phy::LoRa;
 use rppal::gpio::{Gpio, Trigger};
 use rppal::hal::Delay;
@@ -46,13 +46,13 @@ pub async fn create_lora(spi: SpiDevice) -> Result<LoRaDevice, Box<dyn Error>> {
     reset.set_low();
     tokio::time::sleep(std::time::Duration::from_millis(5)).await;
 
-    let config = sx1276_7_8_9::Config {
-        chip: sx1276_7_8_9::Sx127xVariant::Sx1276,
+    let config = Config {
+        chip: Sx127xVariant::Sx1276,
         tcxo_used: false,
     };
     let iv = GenericSx127xInterfaceVariant::new(reset, dio0, None, None, interrupt_rx).unwrap();
 
-    let lora = LoRa::new(SX1276_7_8_9::new(spi, iv, config), false, WithDelayNs::new(Delay))
+    let lora = LoRa::new(Sx127x::new(spi, iv, config), false, WithDelayNs::new(Delay))
         .await
         .unwrap();
 
