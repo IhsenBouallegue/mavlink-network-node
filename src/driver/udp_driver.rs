@@ -1,15 +1,26 @@
 use std::fmt::Display;
 use std::sync::Arc;
 
-use super::abstract_driver::Driver;
+use mavlink::Message as MavMessage;
+use tokio::net::UdpSocket;
+
+use super::Driver;
+use crate::mavlink_utils::{deserialize_frame, serialize_frame};
 use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_packet, log_driver_creation};
-use crate::utils::mavlink_utils::{create_groundstation_mavlink, create_mavlink, mavlink_receive_async, mavlink_send};
-use crate::utils::types::{MavDevice, MavFramePacket, NodeType};
+use crate::utils::types::MavFramePacket;
 
 pub const UDP_DRIVER: &str = "udp_driver";
 
+#[allow(dead_code)]
+pub struct UDPConfig {
+    pub addr: String,
+    pub dest_addr: String,
+    pub broadcast: bool,
+}
+
 pub struct UDPDriver {
-    pub driver_instance: Arc<MavDevice>,
+    pub device: Arc<UdpSocket>,
+    config: UDPConfig,
 }
 
 impl Display for UDPDriver {
@@ -18,51 +29,56 @@ impl Display for UDPDriver {
     }
 }
 
-impl Driver<MavFramePacket> for UDPDriver {
-    fn create_instance() -> Self {
-        let node_type = NodeType::from_str(std::env::var("NODE_TYPE").unwrap().as_str()).unwrap();
-        let mavlink;
-        match node_type {
-            NodeType::Drone => {
-                mavlink = create_mavlink();
-            }
-            NodeType::Gateway => {
-                mavlink = create_groundstation_mavlink();
-            }
-        }
+#[allow(dead_code)]
+impl UDPDriver {
+    pub async fn new(config: UDPConfig) -> Self {
+        let socket = Arc::new(UdpSocket::bind(&config.addr).await.unwrap());
+        socket
+            .set_broadcast(config.broadcast)
+            .expect("Failed to enable broadcast");
+
         log_driver_creation(UDP_DRIVER);
 
-        Self {
-            driver_instance: Arc::new(mavlink),
-        }
+        Self { device: socket, config }
+    }
+}
+
+#[async_trait::async_trait]
+impl Driver for UDPDriver {
+    async fn send(&self, packet: &MavFramePacket) {
+        let socket_send = Arc::clone(&self.device);
+        let serialised_frame = serialize_frame(packet.clone());
+        // log_packet_sent(raw_frame.len(), Some(&dest_addr), &packet, UDP_DRIVER);
+        log_debug_send_packet(&self.to_string(), packet);
+        let _ = socket_send.send_to(&serialised_frame, &self.config.dest_addr).await;
     }
 
-    #[tracing::instrument(
-        skip(self),
-        level = "debug",
-        target = "network",
-        name = "Transmitting",
-        fields(packet_to_send, driver = UDP_DRIVER)
-    )]
-    async fn send(&self, packet_to_send: MavFramePacket) {
-        let mavlink = self.driver_instance.clone();
-        log_debug_send_packet(&self.to_string(), &packet_to_send);
-        mavlink_send(&mavlink, &packet_to_send)
-    }
-
-    #[tracing::instrument(
-        skip(self),
-        level = "debug",
-        target = "network",
-        name = "Receiving",
-        fields(packet_to_send, driver = UDP_DRIVER)
-    )]
     async fn receive(&self) -> Option<MavFramePacket> {
-        let mavlink = self.driver_instance.clone();
-        if let Some(mavlink_frame) = mavlink_receive_async(mavlink).await {
-            log_debug_receive_packet(UDP_DRIVER, &mavlink_frame, None);
-            return Some(mavlink_frame);
+        let mut buf = [0; 256];
+        let socket_recv = Arc::clone(&self.device);
+
+        match socket_recv.recv_from(&mut buf).await {
+            Ok((size, _src_addr)) => {
+                let received_data = Vec::from(&buf[..size]);
+                if let Some(mavlink_frame) = deserialize_frame(&received_data[..]) {
+                    // log_packet_received(size, Some(src_addr), &mavlink_frame, UDP_DRIVER);
+                    log_debug_receive_packet(UDP_DRIVER, &mavlink_frame, None);
+                    if mavlink_frame.msg.message_id() == 30
+                        || mavlink_frame.msg.message_id() == 141
+                        || mavlink_frame.msg.message_id() == 74
+                        || mavlink_frame.msg.message_id() == 410
+                    {
+                        // info!("Message ignored");
+                        None
+                    } else {
+                        Some(mavlink_frame)
+                    }
+                } else {
+                    // info!("Message corrupted");
+                    None
+                }
+            }
+            Err(_) => None, // Ignoring errors for proof of concept
         }
-        None
     }
 }
