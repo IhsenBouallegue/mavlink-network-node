@@ -3,7 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use embedded_hal_bus::spi::ExclusiveDevice;
 use lora_phy::mod_params::{Bandwidth, CodingRate, ModulationParams, PacketParams, RadioError, SpreadingFactor};
-use lora_phy::sx127x::{Config, Sx127x, Sx127xVariant};
+use lora_phy::sx126x::{self, Sx126x};
+use lora_phy::sx127x::{self, Config, Sx127x, Sx127xVariant};
 use lora_phy::LoRa;
 use rppal::gpio::{Gpio, Trigger};
 use rppal::hal::Delay;
@@ -12,20 +13,34 @@ use tokio::sync::mpsc;
 
 use super::adapter::BlockingAsync;
 use super::delay_adapter::WithDelayNs;
-use super::iv::GenericSx127xInterfaceVariant;
+use super::iv::{GenericSx126xInterfaceVariant, GenericSx127xInterfaceVariant};
 use super::logging_utils::log_debug_send_packet;
-use super::types::{LoRaDevice, MavFramePacket, SpiDevice};
-use crate::driver::lora_driver::LORA_DRIVER;
+use super::types::{LoRaDevice, LoRaDeviceSx126x, MavFramePacket, SpiDevice};
+use crate::driver::lora_sx1276_spi::LORA_SX1276_SPI_DRIVER;
 
-const LORA_CS_PIN: u8 = 25;
-const LORA_RESET_PIN: u8 = 17;
-const LORA_DIO0_PIN: u8 = 4;
+pub const LORA_FREQUENCY_IN_HZ: u32 = 869_525_000;
+
+const LORA_SX1276_CS_PIN: u8 = 25;
+const LORA_SX1276_RESET_PIN: u8 = 17;
+const LORA_SX1276_DIO0_PIN: u8 = 4;
 // const LORA_BUSY_PIN: u8 = 11;
-const LORA_FREQUENCY_IN_HZ: u32 = 869_525_000;
+
+const LORA_SX1262_CS_PIN: u8 = 21;
+const LORA_SX1262_RESET_PIN: u8 = 12;
+const LORA_SX1262_DIO1_PIN: u8 = 16;
+const LORA_SX1262_DIO4_PIN: u8 = 6;
+const LORA_SX1262_BUSY_PIN: u8 = 20;
 
 pub fn create_spi() -> Result<SpiDevice, Box<dyn Error>> {
     let gpio = Gpio::new().unwrap();
-    let nss = gpio.get(LORA_CS_PIN).unwrap().into_output();
+    let nss = gpio.get(LORA_SX1276_CS_PIN).unwrap().into_output();
+    let spi_bus = BlockingAsync::new(Spi::new(Bus::Spi0, SlaveSelect::Ss0, 20_000, Mode::Mode0).unwrap());
+    let spi = ExclusiveDevice::new(spi_bus, nss, WithDelayNs::new(Delay));
+    Ok(spi)
+}
+pub fn create_spi_sx1262() -> Result<SpiDevice, Box<dyn Error>> {
+    let gpio = Gpio::new().unwrap();
+    let nss = gpio.get(LORA_SX1262_CS_PIN).unwrap().into_output();
     let spi_bus = BlockingAsync::new(Spi::new(Bus::Spi0, SlaveSelect::Ss0, 20_000, Mode::Mode0).unwrap());
     let spi = ExclusiveDevice::new(spi_bus, nss, WithDelayNs::new(Delay));
     Ok(spi)
@@ -33,8 +48,8 @@ pub fn create_spi() -> Result<SpiDevice, Box<dyn Error>> {
 
 pub async fn create_lora(spi: SpiDevice) -> Result<LoRaDevice, Box<dyn Error>> {
     let gpio = Gpio::new().unwrap();
-    let mut reset = gpio.get(LORA_RESET_PIN).unwrap().into_output();
-    let mut dio0: rppal::gpio::InputPin = gpio.get(LORA_DIO0_PIN).unwrap().into_input_pullup();
+    let mut reset = gpio.get(LORA_SX1276_RESET_PIN).unwrap().into_output();
+    let mut dio0: rppal::gpio::InputPin = gpio.get(LORA_SX1276_DIO0_PIN).unwrap().into_input_pullup();
     let (interrupt_tx, interrupt_rx) = mpsc::channel(3);
 
     let _ = dio0.set_async_interrupt(Trigger::RisingEdge, move |_| {
@@ -59,12 +74,73 @@ pub async fn create_lora(spi: SpiDevice) -> Result<LoRaDevice, Box<dyn Error>> {
     Ok(lora)
 }
 
+pub async fn create_lora_sx1276_spi(spi: SpiDevice) -> Result<LoRaDevice, Box<dyn Error>> {
+    let gpio = Gpio::new().unwrap();
+    let mut reset = gpio.get(LORA_SX1276_RESET_PIN).unwrap().into_output();
+    let mut dio0: rppal::gpio::InputPin = gpio.get(LORA_SX1276_DIO0_PIN).unwrap().into_input_pullup();
+    let (interrupt_tx, interrupt_rx) = mpsc::channel(3);
+
+    let _ = dio0.set_async_interrupt(Trigger::RisingEdge, move |_| {
+        interrupt_tx.try_send(()).unwrap();
+    });
+
+    reset.set_high();
+    tokio::time::sleep(std::time::Duration::from_micros(100)).await;
+    reset.set_low();
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+
+    let config = sx127x::Config {
+        chip: Sx127xVariant::Sx1276,
+        tcxo_used: false,
+    };
+    let iv = GenericSx127xInterfaceVariant::new(reset, dio0, None, None, interrupt_rx).unwrap();
+
+    let lora = LoRa::new(Sx127x::new(spi, iv, config), false, WithDelayNs::new(Delay))
+        .await
+        .unwrap();
+
+    Ok(lora)
+}
+
+pub async fn create_lora_sx1262_spi(spi: SpiDevice) -> Result<LoRaDeviceSx126x, Box<dyn Error>> {
+    let gpio = Gpio::new().unwrap();
+    let mut reset = gpio.get(LORA_SX1262_RESET_PIN).unwrap().into_output();
+    let mut dio1: rppal::gpio::InputPin = gpio.get(LORA_SX1262_DIO1_PIN).unwrap().into_input_pullup();
+    let dio4: rppal::gpio::OutputPin = gpio.get(LORA_SX1262_DIO4_PIN).unwrap().into_output();
+    let busy: rppal::gpio::InputPin = gpio.get(LORA_SX1262_BUSY_PIN).unwrap().into_input_pullup();
+    let (interrupt_tx, interrupt_rx) = mpsc::channel(3);
+
+    let _ = dio1.set_async_interrupt(Trigger::RisingEdge, move |_| {
+        interrupt_tx.try_send(()).unwrap();
+    });
+
+    reset.set_high();
+    tokio::time::sleep(std::time::Duration::from_micros(100)).await;
+    reset.set_low();
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+
+    let config = sx126x::Config {
+        chip: sx126x::Sx126xVariant::Sx1262,
+        tcxo_ctrl: None,
+        use_dcdc: false,
+        use_dio2_as_rfswitch: false,
+    };
+
+    let iv = GenericSx126xInterfaceVariant::new(reset, dio1, busy, None, Some(dio4), interrupt_rx).unwrap();
+
+    let lora = LoRa::new(Sx126x::new(spi, iv, config), false, WithDelayNs::new(Delay))
+        .await
+        .unwrap();
+
+    Ok(lora)
+}
+
 #[tracing::instrument(
     skip(lora),
     level = "debug",
     target = "network",
     name = "Transmitting",
-    fields(mavlink_frame, driver = LORA_DRIVER)
+    fields(mavlink_frame, driver = LORA_SX1276_SPI_DRIVER)
 )]
 pub async fn lora_transmit(lora: Arc<Mutex<LoRaDevice>>, mavlink_frame: &MavFramePacket) {
     let lora = &mut lora.lock().unwrap();
@@ -82,7 +158,7 @@ pub async fn lora_transmit(lora: Arc<Mutex<LoRaDevice>>, mavlink_frame: &MavFram
         .await
     {
         Ok(()) => {
-            log_debug_send_packet(LORA_DRIVER, &mavlink_frame);
+            log_debug_send_packet(LORA_SX1276_SPI_DRIVER, &mavlink_frame);
         }
         Err(err) => {
             println!("Radio error = {:?}", err);
@@ -96,7 +172,7 @@ pub async fn lora_transmit(lora: Arc<Mutex<LoRaDevice>>, mavlink_frame: &MavFram
     level = "debug",
     target = "network",
     name = "Transmitting",
-    fields(mavlink_frame, driver = LORA_DRIVER)
+    fields(mavlink_frame, driver = LORA_SX1276_SPI_DRIVER)
 )]
 pub async fn lora_trans(
     lora: &mut LoRaDevice,
@@ -110,7 +186,7 @@ pub async fn lora_trans(
 
     match lora.tx(mdltn_params, tx_pkt_params, sliced_buffer, 0xffffff).await {
         Ok(()) => {
-            log_debug_send_packet(LORA_DRIVER, &mavlink_frame);
+            log_debug_send_packet(LORA_SX1276_SPI_DRIVER, &mavlink_frame);
         }
         Err(err) => {
             println!("Radio error = {:?}", err);
@@ -153,7 +229,7 @@ pub async fn lora_receive(lora: Arc<Mutex<LoRaDevice>>) -> Option<LoRaReceiveRes
     level = "debug",
     target = "network",
     name = "Receiving",
-    fields(driver = LORA_DRIVER)
+    fields(driver = LORA_SX1276_SPI_DRIVER)
 )]
 pub async fn lora_recv(lora: &mut LoRaDevice) -> Option<LoRaReceiveResult> {
     let mdltn_params = create_modulation_params(lora).unwrap();
@@ -181,7 +257,7 @@ pub async fn lora_recv(lora: &mut LoRaDevice) -> Option<LoRaReceiveResult> {
     level = "debug",
     target = "network",
     name = "Prepare For TX",
-    fields(driver = LORA_DRIVER)
+    fields(driver = LORA_SX1276_SPI_DRIVER)
 )]
 pub async fn prepare_for_tx(lora: &mut LoRaDevice, mdltn_params: &ModulationParams) {
     match lora.prepare_for_tx(mdltn_params, 12, true).await {
@@ -203,7 +279,7 @@ pub fn create_tx_packet_params(lora: &mut LoRaDevice, mdltn_params: &ModulationP
     level = "debug",
     target = "network",
     name = "Prepare For RX",
-    fields(driver = LORA_DRIVER)
+    fields(driver = LORA_SX1276_SPI_DRIVER)
 )]
 pub async fn prepare_for_rx(lora: &mut LoRaDevice, mdltn_params: &ModulationParams, rx_pkt_params: &PacketParams) {
     match lora
@@ -223,7 +299,7 @@ pub async fn prepare_for_rx(lora: &mut LoRaDevice, mdltn_params: &ModulationPara
     level = "debug",
     target = "network",
     name = "Prepare For RX",
-    fields(driver = LORA_DRIVER)
+    fields(driver = LORA_SX1276_SPI_DRIVER)
 )]
 pub async fn prepare_for_rx_2(
     lora: Arc<Mutex<LoRaDevice>>,
