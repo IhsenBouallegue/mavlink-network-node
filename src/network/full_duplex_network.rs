@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tracing::error;
 
-use super::{NetworkInterface, RunHandle};
+use super::NetworkInterface;
 use crate::driver::Driver;
 use crate::utils::logging_utils::log_debug_send_to_main;
 use crate::utils::types::MavFramePacket;
@@ -42,7 +42,7 @@ impl NetworkInterface for FullDuplexNetwork {
         }
     }
 
-    async fn run(self) -> RunHandle {
+    async fn run(self) -> Vec<tokio::task::JoinHandle<()>> {
         // Receiving task
         let send_channel = self.send_channel;
         let receive_driver = self.driver.clone();
@@ -78,6 +78,6 @@ impl NetworkInterface for FullDuplexNetwork {
             })
             .unwrap();
 
-        RunHandle::Dual(recv_task, send_task)
+        vec![recv_task, send_task]
     }
 }

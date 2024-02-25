@@ -5,7 +5,7 @@ use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::time::timeout;
 use tracing::error;
 
-use super::{NetworkInterface, RunHandle};
+use super::NetworkInterface;
 use crate::driver::Driver;
 use crate::utils::logging_utils::log_debug_send_to_main;
 use crate::utils::types::MavFramePacket;
@@ -47,7 +47,7 @@ impl NetworkInterface for HalfDuplexNetwork {
         }
     }
 
-    async fn run(mut self) -> RunHandle {
+    async fn run(mut self) -> Vec<tokio::task::JoinHandle<()>> {
         let task = tokio::task::Builder::new()
         .name(&self.driver.to_string())
         .spawn(async move {
@@ -87,6 +87,6 @@ impl NetworkInterface for HalfDuplexNetwork {
         })
         .unwrap();
 
-        RunHandle::Single(task)
+        vec![task]
     }
 }

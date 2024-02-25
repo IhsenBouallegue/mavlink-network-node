@@ -9,11 +9,6 @@ use tokio::task::JoinHandle;
 use crate::driver::Driver;
 use crate::utils::types::MavFramePacket;
 
-pub enum RunHandle {
-    Single(JoinHandle<()>),
-    Dual(JoinHandle<()>, JoinHandle<()>),
-}
-
 #[allow(async_fn_in_trait)]
 pub trait NetworkInterface {
     /// Creates a new instance of the network interface along with channels for sending and receiving packets.
@@ -31,5 +26,5 @@ pub trait NetworkInterface {
         Self: Sized;
 
     /// Starts the network interface's asynchronous operation, returning a handle on 1 or 2 tasks depending on whether it is half or full duplex.
-    async fn run(self) -> RunHandle;
+    async fn run(self) -> Vec<JoinHandle<()>>;
 }
