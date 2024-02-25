@@ -35,7 +35,7 @@ impl Display for LoRaSx1276SpiDriver {
 
 #[allow(dead_code)]
 impl LoRaSx1276SpiDriver {
-    async fn new(_config: LoRaSx1276SpiConfig) -> Self {
+    pub async fn new(_config: Option<LoRaSx1276SpiConfig>) -> Self {
         let spi = create_spi().unwrap();
         let mut lora = create_lora_sx1276_spi(spi)
             .await

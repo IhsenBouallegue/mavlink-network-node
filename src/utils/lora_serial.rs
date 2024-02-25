@@ -1,11 +1,13 @@
+use std::thread::sleep;
 use std::time::Duration;
 use std::{str, thread};
 
-use rppal::gpio::{Gpio, OutputPin};
+use rppal::gpio::{Gpio, InputPin, OutputPin};
 use rppal::uart::{Parity, Uart};
 
 const M0_PIN: u8 = 22;
 const M1_PIN: u8 = 27;
+const AUX_PIN: u8 = 7;
 
 // Define UART Baud Rates as enum
 #[allow(dead_code)]
@@ -56,6 +58,7 @@ pub enum AirSpeed {
 pub struct Sx1262UartE22 {
     m0: OutputPin,
     m1: OutputPin,
+    aux: InputPin,
     uart: Uart,
     cfg: Vec<u8>,
     addr: u16,        // own address
@@ -68,13 +71,18 @@ impl Sx1262UartE22 {
         let gpio = Gpio::new()?;
         let m0 = gpio.get(M0_PIN)?.into_output();
         let m1 = gpio.get(M1_PIN)?.into_output();
+        let aux = gpio.get(AUX_PIN)?.into_input();
         let cfg = vec![0xC2, 0x00, 0x09, 0x00, 0x00, 0x00, 0x62, 0x00, 0x12, 0x43, 0x00, 0x00];
 
         let uart = Uart::with_path(serial_port, 9600, Parity::None, 8, 1)?;
+        // Set read mode to blocking with a timeout of 100ms
+        // If a length of 255 is reached, the read function will return immediately
+        // uart.set_read_mode(255, Duration::from_millis(100))?;
 
         Ok(Sx1262UartE22 {
             m0,
             m1,
+            aux,
             uart,
             cfg,
             addr: 65535,     // Initialize addr
@@ -109,7 +117,8 @@ impl Sx1262UartE22 {
     }
 
     fn read(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-        let mut buf = vec![0; 1024];
+        sleep(Duration::from_millis(300));
+        let mut buf = vec![0; 255];
         let len = self.uart.read(&mut buf)?;
         buf.truncate(len);
         Ok(buf)
@@ -127,7 +136,7 @@ impl Sx1262UartE22 {
         let low_addr = (node_addr & 0xFF) as u8;
         let own_high_addr = (self.addr >> 8) as u8;
         let own_low_addr = (self.addr & 0xFF) as u8;
-
+        println!("{:?}", message_payload);
         let data = [
             &[
                 high_addr,

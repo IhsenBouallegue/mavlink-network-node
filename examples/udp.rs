@@ -5,6 +5,7 @@ use mavlink_network_node::logging_utils::init_logging;
 use mavlink_network_node::types::NodeType;
 use mavlink_network_node::udp_driver::{UDPConfig, UDPDriver};
 use mavlink_network_node::{NetworkInterface, RunHandle};
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -13,9 +14,18 @@ async fn main() {
     let _guard = init_logging();
 
     match node_type {
-        NodeType::Drone => {}
-        NodeType::Gateway => {}
+        NodeType::Drone => {
+            drone().await;
+        }
+        NodeType::Gateway => {
+            gateway().await;
+        }
     }
+}
+
+async fn drone() {}
+
+async fn gateway() {
     let config = UDPConfig {
         addr: "0.0.0.0:14550".to_string(),            // Listening address
         dest_addr: "192.168.1.255:14550".to_string(), // Destination address for sending

@@ -7,15 +7,15 @@ set -o xtrace
 
 readonly TARGET_ADDRESS=$1
 readonly NODE_TYPE=$2
+readonly EXAMPLE=$3
 
 readonly TARGET_USER=node
-readonly PROJECT=mavlink-network-node
 readonly TARGET_HOST=${TARGET_USER}@${TARGET_ADDRESS}
 
-readonly TARGET_PATH=/home/${TARGET_USER}/${PROJECT}
+readonly TARGET_PATH=/home/${TARGET_USER}/${EXAMPLE}
 readonly TARGET_ARCH=aarch64-unknown-linux-gnu
-readonly SOURCE_PATH=./target/${TARGET_ARCH}/release/${PROJECT}
+readonly SOURCE_PATH=./target/${TARGET_ARCH}/release/examples/${EXAMPLE}
 
-cargo build --release
+cargo build --release --example ${EXAMPLE}
 rsync ${SOURCE_PATH} ${TARGET_HOST}:${TARGET_PATH}
 ssh -t ${TARGET_HOST} "RUST_LOG=debug ${TARGET_PATH} ${NODE_TYPE}"

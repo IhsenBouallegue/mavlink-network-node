@@ -14,16 +14,13 @@ const CONTINOUS_TRANSMISSION_PACKET_LIMIT: u8 = 5;
 const CONTINOUS_TRANSMISSION_WAIT_MS: u64 = 2;
 
 pub struct HalfDuplexNetwork {
-    driver: Arc<dyn Driver + Send + Sync>,
+    driver: Arc<dyn Driver>,
     send_channel: Sender<MavFramePacket>,
     recv_channel: Receiver<MavFramePacket>,
 }
 
 impl NetworkInterface for HalfDuplexNetwork {
-    fn new(
-        driver: Arc<dyn Driver + Send + Sync>,
-        buffer_size: usize,
-    ) -> (Self, Sender<MavFramePacket>, Receiver<MavFramePacket>) {
+    fn new(driver: Arc<dyn Driver>, buffer_size: usize) -> (Self, Sender<MavFramePacket>, Receiver<MavFramePacket>) {
         let (tx_send, rx_send) = mpsc::channel(buffer_size);
         let (tx_recv, rx_recv) = mpsc::channel(buffer_size);
 

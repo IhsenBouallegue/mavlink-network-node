@@ -8,7 +8,7 @@ use std::fmt::Display;
 use crate::utils::types::MavFramePacket;
 
 #[async_trait::async_trait]
-pub trait Driver: Display {
+pub trait Driver: Display + Send + Sync {
     async fn send(&self, packet_to_send: &MavFramePacket);
     async fn receive(&self) -> Option<MavFramePacket>;
     async fn prepare_to_receive(&self) -> Result<(), &str> {

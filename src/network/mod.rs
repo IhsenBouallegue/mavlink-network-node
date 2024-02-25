@@ -17,10 +17,7 @@ pub enum RunHandle {
 #[allow(async_fn_in_trait)]
 pub trait NetworkInterface {
     /// Creates a new instance of the network interface along with channels for sending and receiving packets.
-    fn new(
-        driver: Arc<dyn Driver + Send + Sync>,
-        buffer_size: usize,
-    ) -> (Self, Sender<MavFramePacket>, Receiver<MavFramePacket>)
+    fn new(driver: Arc<dyn Driver>, buffer_size: usize) -> (Self, Sender<MavFramePacket>, Receiver<MavFramePacket>)
     where
         Self: Sized;
 
