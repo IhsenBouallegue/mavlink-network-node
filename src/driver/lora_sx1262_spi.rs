@@ -14,26 +14,26 @@ use crate::utils::types::{LoRaDeviceSx126x, MavFramePacket};
 pub const LORA_SX1262_SPI_DRIVER: &str = "lora_sx1262_spi_driver";
 
 #[allow(dead_code)]
-pub struct LoRaSX1262SpiConfig {
+pub struct LoRaSx1262SpiConfig {
     mdltn_params: ModulationParams,
     rx_pkt_params: PacketParams,
     tx_pkt_params: PacketParams,
 }
 
-pub struct LoRaSX1262SpiDriver {
+pub struct LoRaSx1262SpiDriver {
     pub device: Arc<Mutex<LoRaDeviceSx126x>>,
-    config: LoRaSX1262SpiConfig,
+    config: LoRaSx1262SpiConfig,
 }
 
-impl Display for LoRaSX1262SpiDriver {
+impl Display for LoRaSx1262SpiDriver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", LORA_SX1262_SPI_DRIVER)
     }
 }
 
 #[allow(dead_code)]
-impl LoRaSX1262SpiDriver {
-    async fn new(_config: LoRaSX1262SpiConfig) -> Self {
+impl LoRaSx1262SpiDriver {
+    pub async fn new(_config: Option<LoRaSx1262SpiConfig>) -> Self {
         let spi = create_spi_sx1262().unwrap();
         let mut lora = create_lora_sx1262_spi(spi)
             .await
@@ -57,7 +57,7 @@ impl LoRaSX1262SpiDriver {
 
         Self {
             device: Arc::new(Mutex::new(lora)),
-            config: LoRaSX1262SpiConfig {
+            config: LoRaSx1262SpiConfig {
                 mdltn_params,
                 rx_pkt_params,
                 tx_pkt_params,
@@ -67,7 +67,7 @@ impl LoRaSX1262SpiDriver {
 }
 
 #[async_trait::async_trait]
-impl Driver for LoRaSX1262SpiDriver {
+impl Driver for LoRaSx1262SpiDriver {
     async fn send(&self, packet: &MavFramePacket) {
         let mut lora = self.device.lock().await;
         let buffer: &mut [u8; 255] = &mut [0; 255];
