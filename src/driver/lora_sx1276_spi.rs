@@ -6,7 +6,7 @@ use lora_phy::mod_traits::{IrqState, TargetIrqState};
 use tokio::sync::Mutex;
 
 use super::Driver;
-use crate::mavlink_utils::deserialize_frame;
+use crate::mavlink_utils::{deserialize_frame, serialize_frame};
 use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_packet, log_driver_creation};
 use crate::utils::lora_utils::{
     create_lora_sx1276_spi, create_modulation_params, create_rx_packet_params, create_spi, create_tx_packet_params,
@@ -60,15 +60,13 @@ impl LoRaSx1276SpiDriver {
 impl Driver for LoRaSx1276SpiDriver {
     async fn send(&self, packet: &MavFramePacket) {
         let mut lora = self.device.lock().await;
-        let buffer: &mut [u8; 255] = &mut [0; 255];
-        let length = packet.ser(buffer);
-        let sliced_buffer = &buffer[..length];
+        let serialised_packet = serialize_frame(packet.clone());
 
         match lora
             .tx(
                 &self.config.mdltn_params,
                 &mut self.config.tx_pkt_params.clone(),
-                sliced_buffer,
+                &serialised_packet,
                 0xffffff,
             )
             .await

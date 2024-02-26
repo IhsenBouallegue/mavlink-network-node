@@ -45,6 +45,7 @@ async fn gateway() {
     let mavlink_generator = MavlinkHeaderGenerator::new();
 
     while let Some(_mavlink_frame) = rx.recv().await {
+        sleep(Duration::from_millis(100)).await;
         tx.send(mavlink_generator.create_mavlink_heartbeat_frame())
             .await
             .unwrap();
