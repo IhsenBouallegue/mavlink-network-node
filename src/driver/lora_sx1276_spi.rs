@@ -84,18 +84,23 @@ impl Driver for LoRaSx1276SpiDriver {
     async fn receive(&self) -> Option<MavFramePacket> {
         let mut lora = self.device.lock().await;
 
-        let target_irq_state = lora.process_irq_event(TargetIrqState::Done).await.unwrap();
+        let target_irq_state = lora.process_irq_event().await.unwrap();
         if let Some(TargetIrqState::Done) = target_irq_state {
             let mut receiving_buffer = [00u8; 255];
             match lora
-                .process_rx_irq(&self.config.rx_pkt_params, &mut receiving_buffer, TargetIrqState::Done)
+                .process_rx_irq(&self.config.rx_pkt_params, &mut receiving_buffer)
                 .await
             {
                 Ok(IrqState::RxDone(received_len, rx_pkt_status)) => {
                     let received_data = Vec::from(&receiving_buffer[..received_len as usize]);
                     if let Some(mavlink_frame) = deserialize_frame(&received_data[..]) {
                         // log_packet_received(received_len as usize, None, &mavlink_frame, LORA_DRIVER);
-                        log_debug_receive_packet(&self.to_string(), &mavlink_frame, Some(rx_pkt_status.rssi));
+                        log_debug_receive_packet(
+                            &self.to_string(),
+                            &mavlink_frame,
+                            Some(rx_pkt_status.rssi),
+                            Some(rx_pkt_status.snr),
+                        );
                         return Some(mavlink_frame);
                     }
                 }
