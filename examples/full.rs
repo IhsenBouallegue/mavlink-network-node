@@ -28,7 +28,37 @@ async fn main() {
     }
 }
 
-async fn drone() {}
+async fn drone() {
+    let config = UDPConfig {
+        addr: "0.0.0.0:0".to_string(),                // Bind to all interfaces for receiving
+        dest_addr: "192.168.0.255:14540".to_string(), // Destination address for sending
+        broadcast: true,
+    };
+
+    let udp_driver = Arc::new(UDPDriver::new(config).await);
+    let channel_size = 100;
+    let (udp_network, udp_tx, udp_rx) = FullDuplexNetwork::new(udp_driver, channel_size);
+    let udp_run_handle = udp_network.run().await;
+
+    let lora_to_udp_tx = udp_tx.clone();
+    let lora_driver = Arc::new(LoRaSx1276SpiDriver::new(None).await);
+    let lora_network = HalfDuplexNetwork::new_barebone(lora_driver, lora_to_udp_tx, udp_rx);
+    let lora_run_handle = lora_network.run().await;
+
+    let udp_heartbeat = tokio::task::Builder::new()
+        .name("udp heartbeat")
+        .spawn(send_heartbeat_to_network(udp_tx, UDP_DRIVER, 1000))
+        .unwrap();
+
+    // get udp_run_handle and lora_run_handle and join them
+    join_all(
+        udp_run_handle
+            .into_iter()
+            .chain(lora_run_handle.into_iter())
+            .chain(std::iter::once(udp_heartbeat)),
+    )
+    .await;
+}
 
 async fn gateway() {
     let config = UDPConfig {
