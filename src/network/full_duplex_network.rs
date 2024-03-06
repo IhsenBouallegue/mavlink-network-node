@@ -6,16 +6,15 @@ use tracing::error;
 use super::NetworkInterface;
 use crate::driver::Driver;
 use crate::utils::logging_utils::log_debug_send_to_main;
-use crate::utils::types::MavFramePacket;
 
-pub struct FullDuplexNetwork {
-    driver: Arc<dyn Driver>,
-    send_channel: Sender<MavFramePacket>,
-    recv_channel: Receiver<MavFramePacket>,
+pub struct FullDuplexNetwork<P> {
+    driver: Arc<dyn Driver<P>>,
+    send_channel: Sender<P>,
+    recv_channel: Receiver<P>,
 }
 
-impl NetworkInterface for FullDuplexNetwork {
-    fn new(driver: Arc<dyn Driver>, buffer_size: usize) -> (Self, Sender<MavFramePacket>, Receiver<MavFramePacket>) {
+impl<P: Send + 'static> NetworkInterface<P> for FullDuplexNetwork<P> {
+    fn new(driver: Arc<dyn Driver<P> + Send + Sync>, buffer_size: usize) -> (Self, Sender<P>, Receiver<P>) {
         let (tx_send, rx_send) = mpsc::channel(buffer_size);
         let (tx_recv, rx_recv) = mpsc::channel(buffer_size);
 
@@ -30,11 +29,7 @@ impl NetworkInterface for FullDuplexNetwork {
         )
     }
 
-    fn new_barebone(
-        driver: Arc<dyn Driver + Send + Sync>,
-        tx_send: Sender<MavFramePacket>,
-        rx_recv: Receiver<MavFramePacket>,
-    ) -> Self {
+    fn new_barebone(driver: Arc<dyn Driver<P> + Send + Sync>, tx_send: Sender<P>, rx_recv: Receiver<P>) -> Self {
         FullDuplexNetwork {
             driver,
             send_channel: tx_send,

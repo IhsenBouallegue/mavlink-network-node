@@ -100,7 +100,7 @@ impl LoRaSx1262SpiDriver {
 }
 
 #[async_trait::async_trait]
-impl Driver for LoRaSx1262SpiDriver {
+impl Driver<MavFramePacket> for LoRaSx1262SpiDriver {
     async fn send(&self, packet: &MavFramePacket) {
         let mut lora = self.device.lock().await;
         let serialised_packet = serialize_frame(packet.clone());
