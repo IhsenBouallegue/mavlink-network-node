@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use super::Driver;
+use crate::lora_serial::{AirSpeed, PackageSize, PowerLevel};
 use crate::mavlink_utils::{deserialize_frame, serialize_frame};
 use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_packet, log_driver_creation};
 use crate::utils::lora_serial::Sx1262UartE22;
@@ -29,7 +30,18 @@ impl Display for LoRaSx1262UartDriver {
 #[allow(dead_code)]
 impl LoRaSx1262UartDriver {
     pub async fn new(_config: LoRaSx1262UartConfig) -> Self {
-        let lora = Sx1262UartE22::new("/dev/ttyS0").unwrap();
+        let mut lora = Sx1262UartE22::new("/dev/ttyS0").unwrap();
+        lora.set(
+            868,
+            0,
+            0xFFFF,
+            PowerLevel::Power22dBm,
+            true,
+            AirSpeed::Speed2400,
+            PackageSize::Size240Byte,
+            0,
+        )
+        .unwrap();
         log_driver_creation(LORA_SX1262_UART_DRIVER);
 
         Self {
@@ -50,9 +62,14 @@ impl Driver for LoRaSx1262UartDriver {
 
     async fn receive(&self) -> Option<MavFramePacket> {
         let mut lora = self.device.lock().await;
-        if let Some(serialised_frame) = lora.receive() {
-            if let Some(mavlink_frame) = deserialize_frame(&serialised_frame[..]) {
-                log_debug_receive_packet(&self.to_string(), &mavlink_frame, None);
+        if let Some(receive_result) = lora.receive() {
+            if let Some(mavlink_frame) = deserialize_frame(&receive_result.data[..]) {
+                log_debug_receive_packet(
+                    &self.to_string(),
+                    &mavlink_frame,
+                    Some(receive_result.rssi as i16),
+                    Some(receive_result.snr as i16),
+                );
                 return Some(mavlink_frame);
             }
         }
