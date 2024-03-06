@@ -836,6 +836,7 @@ dependencies = [
  "embedded-hal-async",
  "lora-modulation",
  "num-traits",
+ "tracing",
 ]
 
 [[package]]
@@ -1274,6 +1275,7 @@ dependencies = [
  "libc",
  "nb 0.1.3",
  "spin_sleep",
+ "tokio",
  "void",
 ]
 
