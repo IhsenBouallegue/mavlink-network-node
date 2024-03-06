@@ -29,7 +29,6 @@ impl Display for UDPDriver {
     }
 }
 
-#[allow(dead_code)]
 impl UDPDriver {
     pub async fn new(config: UDPConfig) -> Self {
         let socket = Arc::new(UdpSocket::bind(&config.addr).await.unwrap());
@@ -44,7 +43,7 @@ impl UDPDriver {
 }
 
 #[async_trait::async_trait]
-impl Driver for UDPDriver {
+impl Driver<MavFramePacket> for UDPDriver {
     async fn send(&self, packet: &MavFramePacket) {
         let socket_send = Arc::clone(&self.device);
         let serialised_frame = serialize_frame(packet.clone());
@@ -62,7 +61,7 @@ impl Driver for UDPDriver {
                 let received_data = Vec::from(&buf[..size]);
                 if let Some(mavlink_frame) = deserialize_frame(&received_data[..]) {
                     // log_packet_received(size, Some(src_addr), &mavlink_frame, UDP_DRIVER);
-                    log_debug_receive_packet(UDP_DRIVER, &mavlink_frame, None);
+                    log_debug_receive_packet(UDP_DRIVER, &mavlink_frame, None, None);
                     if mavlink_frame.msg.message_id() == 30
                         || mavlink_frame.msg.message_id() == 141
                         || mavlink_frame.msg.message_id() == 74

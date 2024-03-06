@@ -5,12 +5,10 @@ pub mod udp_driver;
 
 use std::fmt::Display;
 
-use crate::utils::types::MavFramePacket;
-
 #[async_trait::async_trait]
-pub trait Driver: Display + Send + Sync {
-    async fn send(&self, packet_to_send: &MavFramePacket);
-    async fn receive(&self) -> Option<MavFramePacket>;
+pub trait Driver<P>: Display + Send + Sync {
+    async fn send(&self, packet_to_send: &P);
+    async fn receive(&self) -> Option<P>;
     // Only relevant for drivers that work in half-duplex mode
     async fn prepare_to_receive(&self) -> Result<(), &str> {
         Ok(())
