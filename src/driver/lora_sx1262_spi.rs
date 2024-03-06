@@ -1,11 +1,12 @@
 use std::fmt::Display;
 use std::sync::Arc;
 
-use lora_phy::mod_params::{ModulationParams, PacketParams};
+use lora_phy::mod_params::{Bandwidth, CodingRate, ModulationParams, PacketParams, SpreadingFactor};
 use lora_phy::mod_traits::{IrqState, TargetIrqState};
 use tokio::sync::Mutex;
 
 use super::Driver;
+use crate::define_struct_with_defaults;
 use crate::mavlink_utils::{deserialize_frame, serialize_frame};
 use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_packet, log_driver_creation};
 use crate::utils::lora_utils::{create_lora_sx1262_spi, create_spi_sx1262, LORA_FREQUENCY_IN_HZ};
@@ -13,9 +14,23 @@ use crate::utils::types::{LoRaDeviceSx126x, MavFramePacket};
 
 pub const LORA_SX1262_SPI_DRIVER: &str = "lora_sx1262_spi_driver";
 
+define_struct_with_defaults! {
+    LoRaSx1262SpiOptionalInitConfig, LoRaSx1262SpiInitConfig {
+        spreading_factor: SpreadingFactor = SpreadingFactor::_7,
+        bandwidth: Bandwidth = Bandwidth::_250KHz,
+        coding_rate: CodingRate = CodingRate::_4_5,
+        frequency: u32 = LORA_FREQUENCY_IN_HZ,
+        preamble_length: u16 = 4,
+        implicit_header: bool = false,
+        max_payload_length: u8 = 255,
+        crc_enabled: bool = true,
+        iq_inverted: bool = false,
+    }
+}
+
 #[allow(dead_code)]
 pub struct LoRaSx1262SpiConfig {
-    mdltn_params: ModulationParams,
+    modulation_params: ModulationParams,
     rx_pkt_params: PacketParams,
     tx_pkt_params: PacketParams,
 }
@@ -33,32 +48,50 @@ impl Display for LoRaSx1262SpiDriver {
 
 #[allow(dead_code)]
 impl LoRaSx1262SpiDriver {
-    pub async fn new(_config: Option<LoRaSx1262SpiConfig>) -> Self {
-        let spi = create_spi_sx1262().unwrap();
+    pub async fn new(init_config: Option<LoRaSx1262SpiOptionalInitConfig>) -> Self {
+        let init_config = init_config.unwrap_or_default().build();
+
+        let spi = create_spi_sx1262().expect("Failed to create SPI");
         let mut lora = create_lora_sx1262_spi(spi)
             .await
             .expect("Failed to create LoRa instance");
-        let mdltn_params = lora
+
+        let modulation_params = lora
             .create_modulation_params(
-                lora_phy::mod_params::SpreadingFactor::_7,
-                lora_phy::mod_params::Bandwidth::_250KHz,
-                lora_phy::mod_params::CodingRate::_4_5,
-                LORA_FREQUENCY_IN_HZ,
+                init_config.spreading_factor,
+                init_config.bandwidth,
+                init_config.coding_rate,
+                init_config.frequency,
             )
-            .unwrap();
+            .expect("Failed to create modulation params");
+
         let rx_pkt_params = lora
-            .create_rx_packet_params(4, false, 255 as u8, true, false, &mdltn_params)
-            .unwrap();
+            .create_rx_packet_params(
+                init_config.preamble_length,
+                init_config.implicit_header,
+                init_config.max_payload_length,
+                init_config.crc_enabled,
+                init_config.iq_inverted,
+                &modulation_params,
+            )
+            .expect("Failed to create RX packet params");
+
         let tx_pkt_params = lora
-            .create_tx_packet_params(4, false, true, false, &mdltn_params)
-            .unwrap();
+            .create_tx_packet_params(
+                init_config.preamble_length,
+                init_config.implicit_header,
+                init_config.crc_enabled,
+                init_config.iq_inverted,
+                &modulation_params,
+            )
+            .expect("Failed to create TX packet params");
 
         log_driver_creation(LORA_SX1262_SPI_DRIVER);
 
         Self {
             device: Arc::new(Mutex::new(lora)),
             config: LoRaSx1262SpiConfig {
-                mdltn_params,
+                modulation_params,
                 rx_pkt_params,
                 tx_pkt_params,
             },
@@ -74,7 +107,7 @@ impl Driver for LoRaSx1262SpiDriver {
 
         match lora
             .tx(
-                &self.config.mdltn_params,
+                &self.config.modulation_params,
                 &mut self.config.tx_pkt_params.clone(),
                 &serialised_packet,
                 0xffffff,
@@ -93,19 +126,36 @@ impl Driver for LoRaSx1262SpiDriver {
 
     async fn receive(&self) -> Option<MavFramePacket> {
         let mut lora = self.device.lock().await;
+        // let mut receiving_buffer = [00u8; 255];
 
-        let target_irq_state = lora.process_irq_event(TargetIrqState::Done).await.unwrap();
+        // match lora.rx(&self.config.rx_pkt_params, &mut receiving_buffer).await {
+        //     Ok((received_len, rx_pkt_status)) => {
+        //         let received_data = Vec::from(&receiving_buffer[..received_len as usize]);
+        //         if let Some(mavlink_frame) = deserialize_frame(&received_data[..]) {
+        //             // log_packet_received(received_len as usize, None, &mavlink_frame, LORA_DRIVER);
+        //             log_debug_receive_packet(&self.to_string(), &mavlink_frame, Some(rx_pkt_status.rssi));
+        //             return Some(mavlink_frame);
+        //         }
+        //     }
+        //     _ => return None,
+        // }
+        let target_irq_state = lora.process_irq_event().await.unwrap();
         if let Some(TargetIrqState::Done) = target_irq_state {
             let mut receiving_buffer = [00u8; 255];
             match lora
-                .process_rx_irq(&self.config.rx_pkt_params, &mut receiving_buffer, TargetIrqState::Done)
+                .process_rx_irq(&self.config.rx_pkt_params, &mut receiving_buffer)
                 .await
             {
                 Ok(IrqState::RxDone(received_len, rx_pkt_status)) => {
                     let received_data = Vec::from(&receiving_buffer[..received_len as usize]);
                     if let Some(mavlink_frame) = deserialize_frame(&received_data[..]) {
                         // log_packet_received(received_len as usize, None, &mavlink_frame, LORA_DRIVER);
-                        log_debug_receive_packet(&self.to_string(), &mavlink_frame, Some(rx_pkt_status.rssi));
+                        log_debug_receive_packet(
+                            &self.to_string(),
+                            &mavlink_frame,
+                            Some(rx_pkt_status.rssi),
+                            Some(rx_pkt_status.snr),
+                        );
                         return Some(mavlink_frame);
                     }
                 }
@@ -134,9 +184,9 @@ impl Driver for LoRaSx1262SpiDriver {
         match lora
             .prepare_for_rx(
                 lora_phy::RxMode::Continuous,
-                &self.config.mdltn_params,
+                &self.config.modulation_params,
                 &self.config.rx_pkt_params,
-                true,
+                false,
             )
             .await
         {
@@ -151,7 +201,7 @@ impl Driver for LoRaSx1262SpiDriver {
     async fn prepare_to_send(&self) -> Result<(), &str> {
         // DANGER not cancellation safe
         let mut lora = self.device.lock().await;
-        match lora.prepare_for_tx(&self.config.mdltn_params, 12, true).await {
+        match lora.prepare_for_tx(&self.config.modulation_params, 22, true).await {
             Ok(()) => Ok(()),
             Err(err) => {
                 println!("Radio error = {:?}", err);
