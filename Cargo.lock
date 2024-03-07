@@ -836,7 +836,6 @@ dependencies = [
  "embedded-hal-async",
  "lora-modulation",
  "num-traits",
- "tracing",
 ]
 
 [[package]]
