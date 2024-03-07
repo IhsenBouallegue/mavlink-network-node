@@ -28,24 +28,3 @@ macro_rules! define_struct_with_defaults {
         }
     };
 }
-
-// // Example usage of the macro
-// define_struct_with_defaults! {
-//     User {
-//         name: String = "Default Name".to_string(),
-//         age: u32 = 18,
-//         email: String = "default@example.com".to_string(),
-//     }
-// }
-
-// fn main() {
-//     let user_config = UserConfig {
-//         name: Some("John Doe".to_string()),
-//         age: None, // This will use the specified default value
-//         email: Some("john.doe@example.com".to_string()),
-//     };
-
-//     let user: User = user_config.build();
-
-//     println!("User: {}, Age: {}, Email: {}", user.name, user.age, user.email);
-// }

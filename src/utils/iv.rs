@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use embedded_hal::digital::OutputPin;
 use embedded_hal_async::delay::DelayNs;
 use embedded_hal_async::digital::Wait;
@@ -5,6 +7,7 @@ use lora_phy::mod_params::RadioError;
 use lora_phy::mod_params::RadioError::*;
 use lora_phy::mod_traits::InterfaceVariant;
 use tokio::sync::mpsc::Receiver;
+use tokio::sync::Notify;
 
 #[allow(dead_code)]
 /// Base for the InterfaceVariant implementation for a generic Sx127x LoRa board
@@ -100,7 +103,8 @@ pub struct GenericSx126xInterfaceVariant<CTRL, WAIT> {
     busy: WAIT,
     rf_switch_rx: Option<CTRL>,
     rf_switch_tx: Option<CTRL>,
-    interrupt_rx: Receiver<()>,
+    interrupt_rx: Arc<Notify>,
+    interrupt_busy: Receiver<()>,
 }
 
 impl<CTRL, WAIT> GenericSx126xInterfaceVariant<CTRL, WAIT>
@@ -115,7 +119,8 @@ where
         busy: WAIT,
         rf_switch_rx: Option<CTRL>,
         rf_switch_tx: Option<CTRL>,
-        interrupt_rx: Receiver<()>,
+        interrupt_rx: Arc<Notify>,
+        interrupt_busy: Receiver<()>,
     ) -> Result<Self, RadioError> {
         Ok(Self {
             reset,
@@ -124,6 +129,7 @@ where
             rf_switch_rx,
             rf_switch_tx,
             interrupt_rx,
+            interrupt_busy,
         })
     }
 }
@@ -134,23 +140,28 @@ where
     WAIT: Wait,
 {
     async fn reset(&mut self, delay: &mut impl DelayNs) -> Result<(), RadioError> {
-        delay.delay_ms(10).await;
+        delay.delay_ms(100).await;
         self.reset.set_low().map_err(|_| Reset)?;
-        delay.delay_ms(20).await;
+        delay.delay_ms(100).await;
         self.reset.set_high().map_err(|_| Reset)?;
-        delay.delay_ms(10).await;
+        delay.delay_ms(100).await;
+        println!("Reset done");
         Ok(())
     }
     async fn wait_on_busy(&mut self) -> Result<(), RadioError> {
-        self.busy.wait_for_low().await.map_err(|_| Busy)
+        tracing::info!("Waiting on busy");
+        let _ = self.busy.wait_for_low().await;
+        Ok(())
     }
     async fn await_irq(&mut self) -> Result<(), RadioError> {
-        // self.dio1.wait_for_high().await.map_err(|_| DIO1)?;
-        self.interrupt_rx.recv().await;
+        tracing::info!("Waiting for interrupt");
+        self.dio1.wait_for_high().await.map_err(|_| DIO1)?;
+        // self.interrupt_rx.notified().await;
         Ok(())
     }
 
     async fn enable_rf_switch_rx(&mut self) -> Result<(), RadioError> {
+        tracing::info!("Enabling RX switch");
         match &mut self.rf_switch_tx {
             Some(pin) => pin.set_low().map_err(|_| RfSwitchTx)?,
             None => (),

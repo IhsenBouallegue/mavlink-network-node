@@ -28,7 +28,9 @@ const NETWORK_INTERFACE_CREATION_MSG: &str = "Network interface created";
 const NETWORK_INTERFACE_RUNNING_MSG: &str = "Running network interface";
 
 // Initialization of the logging system
-pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
+pub fn init_logging(
+    discovery_notifier: tokio::sync::mpsc::Receiver<String>,
+) -> tracing_appender::non_blocking::WorkerGuard {
     let file_name = format!("logs_{}.json", Utc::now().format("%Y-%m-%d_%H-%M-%S%.3f"));
     let file_appender: RollingFileAppender = RollingFileAppender::new(rolling::Rotation::NEVER, "./logs", &file_name);
     let (non_blocking_file_writer, _guard) = tracing_appender::non_blocking(file_appender);
@@ -38,7 +40,7 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
     //     .spawn();
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info"))
-        .add_directive("lora_phy=error".parse().unwrap());
+        .add_directive("lora_phy=trace".parse().unwrap());
     // .add_directive("tokio=trace".parse().unwrap())
     // .add_directive("runtime=trace".parse().unwrap());
     let file_layer = fmt::layer()
@@ -48,8 +50,8 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
     let stdout_layer = fmt::layer().pretty().with_writer(std::io::stdout);
     let websocket_layer = fmt::layer()
         .json()
-        .with_writer(WebSocketMakeWriter::new())
-        .with_span_events(FmtSpan::CLOSE);
+        .with_span_events(FmtSpan::CLOSE)
+        .with_writer(WebSocketMakeWriter::new(discovery_notifier));
 
     let subscriber = Registry::default()
         .with(filter_layer)
@@ -121,15 +123,27 @@ pub fn log_debug_send_packet<Packet: Debug + Serialize>(driver: &str, packet: &P
 }
 
 // Log the contents of a packet being received with DEBUG level
-pub fn log_debug_receive_packet<Packet: Debug + Serialize>(driver: &str, packet: &Packet, rssi: Option<i16>) {
+pub fn log_debug_receive_packet<Packet: Debug + Serialize>(
+    driver: &str,
+    packet: &Packet,
+    rssi: Option<i16>,
+    snr: Option<i16>,
+) {
     match to_value(packet) {
-        Ok(json_packet) => {
-            if let Some(rssi_value) = rssi {
+        Ok(json_packet) => match (rssi, snr) {
+            (Some(rssi_value), Some(snr_value)) => {
+                debug!(target: "network", driver, rssi = rssi_value, snr = snr_value, %json_packet, "{}", RECEIVE_PACKET_MSG);
+            }
+            (Some(rssi_value), None) => {
                 debug!(target: "network", driver, rssi = rssi_value, %json_packet, "{}", RECEIVE_PACKET_MSG);
-            } else {
+            }
+            (None, Some(snr_value)) => {
+                debug!(target: "network", driver, snr = snr_value, %json_packet, "{}", RECEIVE_PACKET_MSG);
+            }
+            (None, None) => {
                 debug!(target: "network", driver, %json_packet, "{}", RECEIVE_PACKET_MSG);
             }
-        }
+        },
         Err(e) => {
             debug!(target: "network", driver, "Failed to serialize packet for logging: {:?}", e);
         }

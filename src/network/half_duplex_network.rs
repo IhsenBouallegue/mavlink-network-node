@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use tokio::spawn;
 use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::task::JoinHandle;
 use tokio::time::timeout;
 use tracing::error;
 
@@ -42,10 +44,8 @@ impl<P: Send + 'static> NetworkInterface<P> for HalfDuplexNetwork<P> {
         }
     }
 
-    async fn run(mut self) -> Vec<tokio::task::JoinHandle<()>> {
-        let task = tokio::task::Builder::new()
-        .name(&self.driver.to_string())
-        .spawn(async move {
+    async fn run(mut self) -> Vec<JoinHandle<()>> {
+        let task = spawn(async move {
             loop {
                 self.driver.prepare_to_receive().await.unwrap();
                 tokio::select! {
@@ -79,8 +79,7 @@ impl<P: Send + 'static> NetworkInterface<P> for HalfDuplexNetwork<P> {
                     }
                 }
             }
-        })
-        .unwrap();
+        });
 
         vec![task]
     }

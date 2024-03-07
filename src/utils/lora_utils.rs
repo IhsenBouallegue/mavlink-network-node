@@ -13,7 +13,7 @@ use tokio::sync::{mpsc, Notify};
 use super::adapter::BlockingAsync;
 use super::delay_adapter::WithDelayNs;
 use super::iv::{GenericSx126xInterfaceVariant, GenericSx127xInterfaceVariant};
-use super::types::{LoRaDevice, LoRaDeviceSx126x, SpiDevice};
+use super::lora_types::{LoRaDeviceSx126x, LoRaDeviceSx127x, SpiDevice};
 
 pub const LORA_FREQUENCY_IN_HZ: u32 = 869_525_000;
 
@@ -43,7 +43,7 @@ pub fn create_spi_sx1262() -> Result<SpiDevice, Box<dyn Error>> {
     Ok(spi)
 }
 
-pub async fn create_lora_sx1276_spi(spi: SpiDevice) -> Result<LoRaDevice, Box<dyn Error>> {
+pub async fn create_lora_sx1276_spi(spi: SpiDevice) -> Result<LoRaDeviceSx127x, Box<dyn Error>> {
     let gpio = Gpio::new().unwrap();
     let mut reset = gpio.get(LORA_SX1276_RESET_PIN).unwrap().into_output();
     let mut dio0: rppal::gpio::InputPin = gpio.get(LORA_SX1276_DIO0_PIN).unwrap().into_input_pullup();

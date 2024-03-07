@@ -1,9 +1,19 @@
+#[cfg(feature = "embedded")]
 pub mod adapter;
+#[cfg(feature = "embedded")]
 pub mod delay_adapter;
+#[cfg(feature = "embedded")]
 pub mod iv;
-pub mod logging_utils;
+#[cfg(feature = "embedded")]
 pub mod lora_serial;
+#[cfg(feature = "embedded")]
+pub mod lora_types;
+#[cfg(feature = "embedded")]
 pub mod lora_utils;
+
+pub mod discover;
+pub mod logging_utils;
+pub mod macros;
 pub mod mavlink_utils;
 pub mod types;
 pub mod websocket_layer;

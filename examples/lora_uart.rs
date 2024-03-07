@@ -1,6 +1,7 @@
 use std::env;
 use std::time::Duration;
 
+use mavlink_network_node::discover::DiscoveryService;
 use mavlink_network_node::logging_utils::init_logging;
 use mavlink_network_node::lora_serial::Sx1262UartE22;
 use mavlink_network_node::types::NodeType;
@@ -11,7 +12,8 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     let node_type = NodeType::from_str(&args[1]).unwrap();
     std::env::set_var("NODE_TYPE", &args[1]);
-    let _guard = init_logging();
+    let (_discovery_service, discovery_notifier) = DiscoveryService::new();
+    let _guard = init_logging(discovery_notifier);
 
     match node_type {
         NodeType::Drone => {
@@ -26,7 +28,7 @@ async fn main() {
             let mut sx126x = Sx1262UartE22::new("/dev/ttyS0").unwrap();
             loop {
                 if let Some(message) = sx126x.receive() {
-                    println!("Received message {:?}", message);
+                    println!("Received message {:?}", message.data);
                 }
             }
         }

@@ -24,7 +24,6 @@ pub enum UartBaudRate {
 }
 
 // Define Package Sizes as enum
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum PackageSize {
     Size240Byte = 0x00,
@@ -34,7 +33,6 @@ pub enum PackageSize {
 }
 
 // Define Power Levels as enum
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum PowerLevel {
     Power22dBm = 0x00,
@@ -42,7 +40,6 @@ pub enum PowerLevel {
     Power13dBm = 0x02,
     Power10dBm = 0x03,
 }
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum AirSpeed {
     Speed1200 = 0x01,
@@ -64,6 +61,12 @@ pub struct Sx1262UartE22 {
     addr: u16,        // own address
     start_freq: u16,  // Start frequency of LoRa module
     offset_freq: u16, // Offset between start and end frequency of LoRa module
+}
+
+pub struct ReceiveResult {
+    pub data: Vec<u8>,
+    pub rssi: i16,
+    pub snr: u8,
 }
 
 impl Sx1262UartE22 {
@@ -136,7 +139,7 @@ impl Sx1262UartE22 {
         let low_addr = (node_addr & 0xFF) as u8;
         let own_high_addr = (self.addr >> 8) as u8;
         let own_low_addr = (self.addr & 0xFF) as u8;
-        println!("{:?}", message_payload);
+        // println!("{:?}", message_payload);
         let data = [
             &[
                 high_addr,
@@ -157,13 +160,18 @@ impl Sx1262UartE22 {
         Ok(())
     }
 
-    pub fn receive(&mut self) -> Option<Vec<u8>> {
+    pub fn receive(&mut self) -> Option<ReceiveResult> {
         if let Ok(r_buff) = self.read() {
             if !r_buff.is_empty() {
                 let _addr = ((r_buff[0] as u16) << 8) + r_buff[1] as u16;
                 let _freq = r_buff[2] as u16 + self.start_freq;
-
-                return Some(r_buff[3..].to_vec());
+                let noise = r_buff[r_buff.len() - 1];
+                let rssi = self.get_channel_rssi().unwrap();
+                return Some(ReceiveResult {
+                    data: r_buff[3..r_buff.len() - 1].to_vec(),
+                    rssi,
+                    snr: noise,
+                });
             } else {
                 return None;
             }
@@ -176,11 +184,11 @@ impl Sx1262UartE22 {
         &mut self,
         freq: u32,
         addr: u16,
-        power: u8,
+        net_id: u16,
+        power: PowerLevel,
         rssi: bool,
         air_speed: AirSpeed,
-        net_id: u16,
-        buffer_size: u8,
+        buffer_size: PackageSize,
         crypt: u16,
         // relay: bool,
         // lbt: bool,
@@ -203,6 +211,7 @@ impl Sx1262UartE22 {
         let buffer_size_temp = buffer_size as u8;
         let power_temp = power as u8;
         let rssi_temp = if rssi { 0x80 } else { 0x00 };
+        let enable_noise = (0b1 << 5) as u8;
         // Encryption keys split into high and low bytes
         let l_crypt = (crypt & 0xFF) as u8;
         let h_crypt = ((crypt >> 8) & 0xFF) as u8;
@@ -217,9 +226,9 @@ impl Sx1262UartE22 {
             net_id_temp,
             UartBaudRate::Baud9600 as u8 | air_speed as u8, // Air speed mapping
             // will enable to read noise rssi value when add 0x20 as follow
-            buffer_size_temp | power_temp | 0x20, // Combined buffer size, power
-            offset_freq,                          // Frequency adjustment
-            0x43 | rssi_temp,                     // Additional RSSI configuration
+            buffer_size_temp | power_temp | enable_noise, // Combined buffer size, power
+            offset_freq,                                  // Frequency adjustment
+            0x43 | rssi_temp,                             // Additional RSSI configuration
             h_crypt,
             l_crypt, // Encryption key bytes
         ];
@@ -255,5 +264,30 @@ impl Sx1262UartE22 {
         thread::sleep(Duration::from_millis(100));
 
         Ok(())
+    }
+
+    // Function to get the channel RSSI
+    pub fn get_channel_rssi(&mut self) -> Result<i16, Box<dyn std::error::Error>> {
+        // Set module to normal operation mode
+        self.set_mode((false, false));
+        // Wait a little bit for the module to be ready
+        sleep(Duration::from_millis(10));
+
+        // Send command to read RSSI
+        self.write(&[0xC0, 0xC1, 0xC2, 0xC3, 0x00, 0x02])?;
+
+        // Read the response
+        sleep(Duration::from_millis(10));
+        let response = self.read()?;
+
+        // Check if the response is valid
+        if response.len() >= 5 && response[0] == 0xC1 && response[1] == 0x00 && response[2] == 0x02 {
+            let rssi_value = 256 - response[3] as i16;
+            println!("the current noise rssi value: -{}dBm", rssi_value);
+            return Ok(rssi_value);
+        }
+
+        println!("receive rssi value fail");
+        Err("Failed to get channel RSSI".into())
     }
 }

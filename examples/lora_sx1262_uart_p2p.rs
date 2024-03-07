@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use mavlink_network_node::discover::DiscoveryService;
 use mavlink_network_node::full_duplex_network::FullDuplexNetwork;
 use mavlink_network_node::logging_utils::init_logging;
 use mavlink_network_node::lora_sx1262_uart::{LoRaSx1262UartConfig, LoRaSx1262UartDriver};
@@ -14,7 +15,8 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
     let node_type = NodeType::from_str(&args[1]).unwrap();
     std::env::set_var("NODE_TYPE", &args[1]);
-    let _guard = init_logging();
+    let (_discovery_service, discovery_notifier) = DiscoveryService::new();
+    let _guard = init_logging(discovery_notifier);
 
     match node_type {
         NodeType::Drone => {

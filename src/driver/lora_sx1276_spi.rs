@@ -7,10 +7,11 @@ use tokio::sync::Mutex;
 
 use super::Driver;
 use crate::define_struct_with_defaults;
+use crate::lora_types::LoRaDeviceSx127x;
 use crate::mavlink_utils::{deserialize_frame, serialize_frame};
 use crate::utils::logging_utils::{log_debug_receive_packet, log_debug_send_packet, log_driver_creation};
 use crate::utils::lora_utils::{create_lora_sx1276_spi, create_spi};
-use crate::utils::types::{LoRaDevice, MavFramePacket};
+use crate::utils::types::MavFramePacket;
 
 pub const LORA_SX1276_SPI_DRIVER: &str = "lora_sx1276_spi_driver";
 
@@ -40,7 +41,7 @@ pub struct LoRaSx1276SpiConfig {
 }
 
 pub struct LoRaSx1276SpiDriver {
-    pub device: Arc<Mutex<LoRaDevice>>,
+    pub device: Arc<Mutex<LoRaDeviceSx127x>>,
     config: LoRaSx1276SpiConfig,
 }
 

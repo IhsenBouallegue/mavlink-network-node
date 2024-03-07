@@ -1,7 +1,11 @@
+#[cfg(feature = "embedded")]
 pub mod lora_sx1262_spi;
+#[cfg(feature = "embedded")]
 pub mod lora_sx1262_uart;
+#[cfg(feature = "embedded")]
 pub mod lora_sx1276_spi;
 pub mod udp_driver;
+pub mod websocket_driver;
 
 use std::fmt::Display;
 

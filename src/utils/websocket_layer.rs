@@ -1,8 +1,7 @@
 use std::io::Write;
 
 use futures_util::{SinkExt, StreamExt};
-use tokio::net::UdpSocket;
-use tokio::sync::mpsc::{self, Sender};
+use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::http::Uri;
 use tokio_tungstenite::tungstenite::Message;
@@ -33,11 +32,11 @@ pub struct WebSocketMakeWriter {
 }
 
 impl WebSocketMakeWriter {
-    pub fn new() -> Self {
+    pub fn new(discovery_notifier: Receiver<String>) -> Self {
         let (sender, mut receiver) = mpsc::channel(3); // Adjust buffer size as needed
         tokio::spawn(async move {
             // Udp discovery of the websocket server ip
-            let ws_url = discover_websocket_server().await.unwrap();
+            let ws_url = discover_websocket_server(discovery_notifier).await;
 
             let (ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
             let (mut write, mut _read) = ws_stream.split();
@@ -63,30 +62,12 @@ impl<'a> MakeWriter<'a> for WebSocketMakeWriter {
     }
 }
 
-const SERVER_DISCOVERY_MSG: &str = "WebSocketServer";
-const CLIENT_DISCOVERY_MSG: &str = "Connected";
-
-async fn discover_websocket_server() -> Result<Uri, Box<dyn std::error::Error>> {
-    let socket = UdpSocket::bind("0.0.0.0:8080").await?;
-
-    let mut buf = [0u8; 1024];
+async fn discover_websocket_server(mut discovery_notifier: Receiver<String>) -> Uri {
     loop {
-        match socket.recv_from(&mut buf).await {
-            Ok((size, src_addr)) => {
-                let message = String::from_utf8_lossy(&buf[..size]);
-                println!("Received message: {}", message);
-
-                if message.trim() == SERVER_DISCOVERY_MSG {
-                    socket.send_to(CLIENT_DISCOVERY_MSG.as_bytes(), src_addr).await.unwrap();
-                    let ws_url = format!("ws://{}:8080", src_addr.ip());
-                    return Ok(Uri::try_from(ws_url)?);
-                }
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                // No message received yet, continue waiting
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            }
-            Err(e) => return Err(Box::new(e)),
+        if let Some(discovered_node) = discovery_notifier.recv().await {
+            // Attempt to establish a WebSocket connection to the discovered node
+            let ws_url = format!("ws://{}", discovered_node);
+            return Uri::try_from(ws_url).unwrap();
         }
     }
 }
