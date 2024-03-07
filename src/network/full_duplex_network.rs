@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
+use tokio::spawn;
 use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::task::JoinHandle;
 use tracing::error;
 
 use super::NetworkInterface;
@@ -37,41 +39,35 @@ impl<P: Send + 'static> NetworkInterface<P> for FullDuplexNetwork<P> {
         }
     }
 
-    async fn run(self) -> Vec<tokio::task::JoinHandle<()>> {
+    async fn run(self) -> Vec<JoinHandle<()>> {
         // Receiving task
         let send_channel = self.send_channel;
         let receive_driver = self.driver.clone();
 
-        let recv_task = tokio::task::Builder::new()
-            .name(&format!("{} recv", &receive_driver.to_string()))
-            .spawn(async move {
-                loop {
-                    if let Some(mavlink_frame) = receive_driver.receive().await {
-                        match send_channel.try_send(mavlink_frame) {
-                            Err(mpsc::error::TrySendError::Full(_)) => {
-                                error!("Send channel is full, dropping packet.");
-                            }
-                            Ok(_) => {
-                                log_debug_send_to_main(&receive_driver.to_string());
-                            }
-                            _ => {}
+        let recv_task = spawn(async move {
+            loop {
+                if let Some(mavlink_frame) = receive_driver.receive().await {
+                    match send_channel.try_send(mavlink_frame) {
+                        Err(mpsc::error::TrySendError::Full(_)) => {
+                            error!("Send channel is full, dropping packet.");
                         }
+                        Ok(_) => {
+                            log_debug_send_to_main(&receive_driver.to_string());
+                        }
+                        _ => {}
                     }
                 }
-            })
-            .unwrap();
+            }
+        });
 
         // Sending task
         let sending_driver = self.driver.clone();
         let mut recv_channel = self.recv_channel;
-        let send_task = tokio::task::Builder::new()
-            .name(&format!("{} send", &sending_driver.to_string()))
-            .spawn(async move {
-                while let Some(packet) = recv_channel.recv().await {
-                    sending_driver.send(&packet).await;
-                }
-            })
-            .unwrap();
+        let send_task = spawn(async move {
+            while let Some(packet) = recv_channel.recv().await {
+                sending_driver.send(&packet).await;
+            }
+        });
 
         vec![recv_task, send_task]
     }

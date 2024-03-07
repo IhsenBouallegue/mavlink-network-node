@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use futures::future::join_all;
+use mavlink_network_node::discover::DiscoveryService;
 use mavlink_network_node::full_duplex_network::FullDuplexNetwork;
 use mavlink_network_node::half_duplex_network::HalfDuplexNetwork;
 use mavlink_network_node::logging_utils::{init_logging, log_debug_send_to_network};
@@ -16,7 +17,9 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
     let node_type = NodeType::from_str(&args[1]).unwrap();
     std::env::set_var("NODE_TYPE", &args[1]);
-    let _guard = init_logging();
+    let (discovery_service, discovery_notifier) = DiscoveryService::new();
+    let _handle = discovery_service.discover().await;
+    let _guard = init_logging(discovery_notifier);
 
     match node_type {
         NodeType::Drone => {

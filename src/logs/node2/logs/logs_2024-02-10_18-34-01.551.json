@@ -1,0 +1,26 @@
+{"timestamp":"2024-02-10T18:34:01.563529Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:01.564711Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":0},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:02.565875Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:02.566138Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":1},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:03.567642Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:03.568053Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":2},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:04.569604Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:04.569845Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":3},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:05.570554Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:05.570827Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":4},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:06.571754Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:06.572024Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":5},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:07.573830Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:07.574057Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":6},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:08.575146Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:08.575408Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":7},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:09.576242Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:09.576549Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":8},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:10.577527Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:10.578082Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":9},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:11.579914Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:11.580169Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":10},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:12.581847Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:12.582211Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":11},"target":"mavlink_network_node::utils::udp_comm"}
+{"timestamp":"2024-02-10T18:34:13.584402Z","level":"DEBUG","fields":{"message":"Send to network","driver":"udp_driver"},"target":"main"}
+{"timestamp":"2024-02-10T18:34:13.584925Z","level":"INFO","fields":{"message":"Sending packet","size":21,"dest_addr":"192.168.1.255:14550","message_type":"HEARTBEAT","message_seq":12},"target":"mavlink_network_node::utils::udp_comm"}
