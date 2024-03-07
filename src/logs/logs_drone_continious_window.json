@@ -1,6 +1,0 @@
-{"timestamp":"2024-01-18T19:29:00.148084Z","level":"DEBUG","fields":{"message":"close","time.busy":"31.2ms","time.idle":"29.9µs"},"target":"network","span":{"driver":"lora_driver","name":"Prepare For RX"},"spans":[]}
-{"timestamp":"2024-01-18T19:29:00.148243Z","level":"DEBUG","fields":{"message":"Driver instance created","driver":"lora_driver"},"target":"network"}
-{"timestamp":"2024-01-18T19:29:00.148282Z","level":"DEBUG","fields":{"message":"Network interface created","driver":"lora_driver"},"target":"network"}
-{"timestamp":"2024-01-18T19:29:00.148313Z","level":"INFO","fields":{"message":"Running network interface","driver":"lora_driver"},"target":"network"}
-{"timestamp":"2024-01-18T19:29:00.180804Z","level":"DEBUG","fields":{"message":"close","time.busy":"32.4ms","time.idle":"13.7µs"},"target":"network","span":{"driver":"lora_driver","name":"Prepare For RX"},"spans":[{"driver":"lora_driver","name":"Receiving"}]}
-{"timestamp":"2024-01-18T19:29:00.701041Z","level":"DEBUG","fields":{"message":"close","time.busy":"553ms","time.idle":"17.7µs"},"target":"network","span":{"driver":"lora_driver","name":"Receiving"},"spans":[]}
