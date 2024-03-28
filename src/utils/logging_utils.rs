@@ -27,7 +27,7 @@ const SEND_TO_NETWORK_MSG: &str = "Send to network";
 const NETWORK_INTERFACE_CREATION_MSG: &str = "Network interface created";
 const NETWORK_INTERFACE_RUNNING_MSG: &str = "Running network interface";
 
-// Initialization of the logging system
+/// Initialization of the logging system
 pub fn init_logging(
     discovery_notifier: tokio::sync::mpsc::Receiver<String>,
 ) -> tracing_appender::non_blocking::WorkerGuard {
@@ -35,14 +35,9 @@ pub fn init_logging(
     let file_appender: RollingFileAppender = RollingFileAppender::new(rolling::Rotation::NEVER, "./logs", &file_name);
     let (non_blocking_file_writer, _guard) = tracing_appender::non_blocking(file_appender);
 
-    // let console_layer = console_subscriber::ConsoleLayer::builder()
-    //     .server_addr(([127, 0, 0, 1], 5555))
-    //     .spawn();
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info"))
         .add_directive("lora_phy=trace".parse().unwrap());
-    // .add_directive("tokio=trace".parse().unwrap())
-    // .add_directive("runtime=trace".parse().unwrap());
     let file_layer = fmt::layer()
         .json()
         .with_writer(non_blocking_file_writer)
@@ -50,15 +45,14 @@ pub fn init_logging(
     let stdout_layer = fmt::layer().pretty().with_writer(std::io::stdout);
     let websocket_layer = fmt::layer()
         .json()
-        .with_span_events(FmtSpan::CLOSE)
-        .with_writer(WebSocketMakeWriter::new(discovery_notifier));
+        .with_writer(WebSocketMakeWriter::new(discovery_notifier))
+        .with_span_events(FmtSpan::CLOSE);
 
     let subscriber = Registry::default()
         .with(filter_layer)
         .with(file_layer)
         .with(stdout_layer)
         .with(websocket_layer);
-    // .with(console_layer);
 
     tracing::subscriber::set_global_default(subscriber).expect("Unable to set global subscriber");
 
