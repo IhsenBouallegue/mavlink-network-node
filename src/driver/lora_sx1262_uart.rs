@@ -29,14 +29,14 @@ impl Display for LoRaSx1262UartDriver {
 
 #[allow(dead_code)]
 impl LoRaSx1262UartDriver {
-    pub async fn new(_config: LoRaSx1262UartConfig) -> Self {
+    pub async fn new(_config: Option<LoRaSx1262UartConfig>) -> Self {
         let mut lora = Sx1262UartE22::new("/dev/ttyS0").unwrap();
         lora.set(
             868,
             0,
             0xFFFF,
             PowerLevel::Power22dBm,
-            true,
+            false,
             AirSpeed::Speed2400,
             PackageSize::Size240Byte,
             0,
@@ -67,8 +67,8 @@ impl Driver<MavFramePacket> for LoRaSx1262UartDriver {
                 log_debug_receive_packet(
                     &self.to_string(),
                     &mavlink_frame,
-                    Some(receive_result.rssi as i16),
-                    Some(receive_result.snr as i16),
+                    receive_result.rssi,
+                    receive_result.snr.map(|snr| snr as i16), // Convert u8 to i16
                 );
                 return Some(mavlink_frame);
             }
