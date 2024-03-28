@@ -22,8 +22,8 @@ pub fn deserialize_frame(buffer: &[u8]) -> Option<MavFramePacket> {
                 msg: packet.1,
                 protocol_version: mavlink::MavlinkVersion::V2,
             }),
-            Err(_) => {
-                error!("Failed to deserialize mavlink frame: {:?}", buffer);
+            Err(e) => {
+                error!("Failed to deserialize mavlink frame: {:?}, eroor: {}", buffer, e);
                 None
             }
         },
