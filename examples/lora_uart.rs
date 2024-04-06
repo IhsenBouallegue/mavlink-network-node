@@ -16,7 +16,7 @@ async fn main() {
     let _guard = init_logging(discovery_notifier);
 
     match node_type {
-        NodeType::Drone => {
+        NodeType::Uav => {
             let mut sx126x = Sx1262UartE22::new("/dev/ttyS0").unwrap();
             loop {
                 println!("Sending message");

@@ -5,14 +5,14 @@ pub type MavFramePacket = MavFrame<MavMessage>;
 
 #[derive(Debug)]
 pub enum NodeType {
-    Drone,
+    Uav,
     Gateway,
 }
 
 impl NodeType {
     pub fn from_str(s: &str) -> Result<NodeType, ()> {
         match s {
-            "Drone" => Ok(NodeType::Drone),
+            "Uav" => Ok(NodeType::Uav),
             "Gateway" => Ok(NodeType::Gateway),
             _ => Err(println!("Invalid node type")),
         }

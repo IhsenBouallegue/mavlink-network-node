@@ -62,7 +62,7 @@ impl MavlinkHeaderGenerator {
     fn create_mavlink_header(&self) -> MavHeader {
         let node_type = NodeType::from_str(&std::env::var("NODE_TYPE").unwrap()).unwrap();
         let system_id = match node_type {
-            NodeType::Drone => 201,
+            NodeType::Uav => 201,
             NodeType::Gateway => 101,
         };
 

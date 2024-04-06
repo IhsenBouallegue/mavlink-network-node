@@ -11,7 +11,7 @@ async fn main() {
     let _guard = init_logging(discovery_notifier);
 
     match node_type {
-        NodeType::Drone => {
+        NodeType::Uav => {
             let handle = discovery_service.discover().await;
             handle.await.unwrap();
         }

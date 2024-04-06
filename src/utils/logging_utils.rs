@@ -10,7 +10,7 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, EnvFilter, Registry};
 
-use super::types::MavFramePacket;
+use super::types::{MavFramePacket, NodeType};
 use super::websocket_layer::WebSocketMakeWriter;
 
 // Constants for log messages
@@ -31,7 +31,9 @@ const NETWORK_INTERFACE_RUNNING_MSG: &str = "Running network interface";
 pub fn init_logging(
     discovery_notifier: tokio::sync::mpsc::Receiver<String>,
 ) -> tracing_appender::non_blocking::WorkerGuard {
-    let file_name = format!("logs_{}.json", Utc::now().format("%Y-%m-%d_%H-%M-%S%.3f"));
+    let node_type = NodeType::from_str(&std::env::var("NODE_TYPE").unwrap()).unwrap();
+
+    let file_name = format!("{:?}_{}.json", node_type, Utc::now().format("%Y-%m-%d_%H-%M-%S%.3f"));
     let file_appender: RollingFileAppender = RollingFileAppender::new(rolling::Rotation::NEVER, "./logs", &file_name);
     let (non_blocking_file_writer, _guard) = tracing_appender::non_blocking(file_appender);
 
