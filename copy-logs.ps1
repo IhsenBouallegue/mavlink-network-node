@@ -9,7 +9,7 @@ Function Copy-Logs {
         [string]$target_host
     )
 
-    $target_address = "${TARGET_USER}@${target_host}.local"
+    $target_address = "${TARGET_USER}@${target_host}"
     $dest_path = "${DEST_BASE_PATH}/${target_host}"
 
     Write-Host "------COPY-------"
