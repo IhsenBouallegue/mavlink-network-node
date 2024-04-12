@@ -66,6 +66,9 @@ impl Driver<MavFramePacket> for UDPDriver {
                         || mavlink_frame.msg.message_id() == 141
                         || mavlink_frame.msg.message_id() == 74
                         || mavlink_frame.msg.message_id() == 410
+                        || mavlink_frame.msg.message_id() == 109 // RADIO_STATUS
+                        || mavlink_frame.msg.message_name() == "RADIO_STATUS"
+                        || mavlink_frame.msg.message_name() == "MISSION_CURRENT"
                     {
                         // info!("Message ignored");
                         None
