@@ -22,8 +22,8 @@ pub fn deserialize_frame(buffer: &[u8]) -> Option<MavFramePacket> {
                 msg: packet.1,
                 protocol_version: mavlink::MavlinkVersion::V2,
             }),
-            Err(_) => {
-                error!("Failed to deserialize mavlink frame: {:?}", buffer);
+            Err(e) => {
+                error!("Failed to deserialize mavlink frame: {:?}, eroor: {}", buffer, e);
                 None
             }
         },
@@ -62,7 +62,7 @@ impl MavlinkHeaderGenerator {
     fn create_mavlink_header(&self) -> MavHeader {
         let node_type = NodeType::from_str(&std::env::var("NODE_TYPE").unwrap()).unwrap();
         let system_id = match node_type {
-            NodeType::Drone => 201,
+            NodeType::Uav => 201,
             NodeType::Gateway => 101,
         };
 

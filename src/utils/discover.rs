@@ -29,7 +29,7 @@ impl DiscoveryService {
     pub async fn discover(&self) -> tokio::task::JoinHandle<()> {
         let socket = UdpSocket::bind("0.0.0.0:0").await.unwrap(); // Bind to an ephemeral port
         socket.set_broadcast(true).unwrap();
-        let broadcast_address = "192.168.1.255:8080";
+        let broadcast_address = "192.168.255.255:8080";
         let discovered_nodes = self.discovered_nodes.clone();
         let discover_notifier = self.discovery_notifier.clone();
 

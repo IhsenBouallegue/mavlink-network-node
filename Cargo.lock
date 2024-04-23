@@ -1264,7 +1264,7 @@ checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
 name = "rppal"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "embedded-hal 0.2.7",
  "embedded-hal 1.0.0",

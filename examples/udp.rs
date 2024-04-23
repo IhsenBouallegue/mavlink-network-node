@@ -17,8 +17,8 @@ async fn main() {
     let _guard = init_logging(discovery_notifier);
 
     match node_type {
-        NodeType::Drone => {
-            drone().await;
+        NodeType::Uav => {
+            uav().await;
         }
         NodeType::Gateway => {
             gateway().await;
@@ -26,7 +26,7 @@ async fn main() {
     }
 }
 
-async fn drone() {}
+async fn uav() {}
 
 async fn gateway() {
     let config = UDPConfig {

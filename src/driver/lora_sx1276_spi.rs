@@ -108,6 +108,13 @@ impl LoRaSx1276SpiDriver {
 
 #[async_trait::async_trait]
 impl Driver<MavFramePacket> for LoRaSx1276SpiDriver {
+    #[tracing::instrument(
+        skip_all,
+        level = "debug",
+        target = "network",
+        name = "Transmitting",
+        fields(packet, driver = LORA_SX1276_SPI_DRIVER)
+    )]
     async fn send(&self, packet: &MavFramePacket) {
         let mut lora = self.device.lock().await;
         let serialised_packet = serialize_frame(packet.clone());
@@ -131,6 +138,13 @@ impl Driver<MavFramePacket> for LoRaSx1276SpiDriver {
         };
     }
 
+    #[tracing::instrument(
+        skip_all,
+        level = "debug",
+        target = "network",
+        name = "Receiving",
+        fields(driver = LORA_SX1276_SPI_DRIVER)
+    )]
     async fn receive(&self) -> Option<MavFramePacket> {
         let mut lora = self.device.lock().await;
 

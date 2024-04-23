@@ -65,8 +65,8 @@ pub struct Sx1262UartE22 {
 
 pub struct ReceiveResult {
     pub data: Vec<u8>,
-    pub rssi: i16,
-    pub snr: u8,
+    pub rssi: Option<i16>,
+    pub snr: Option<u8>,
 }
 
 impl Sx1262UartE22 {
@@ -168,9 +168,9 @@ impl Sx1262UartE22 {
                 let noise = r_buff[r_buff.len() - 1];
                 let rssi = self.get_channel_rssi().unwrap();
                 return Some(ReceiveResult {
-                    data: r_buff[3..r_buff.len() - 1].to_vec(),
-                    rssi,
-                    snr: noise,
+                    data: r_buff[3..r_buff.len()].to_vec(),
+                    rssi: Some(rssi),
+                    snr: Some(noise),
                 });
             } else {
                 return None;

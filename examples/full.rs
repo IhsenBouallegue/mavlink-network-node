@@ -22,8 +22,8 @@ async fn main() {
     let _guard = init_logging(discovery_notifier);
 
     match node_type {
-        NodeType::Drone => {
-            drone().await;
+        NodeType::Uav => {
+            uav().await;
         }
         NodeType::Gateway => {
             gateway().await;
@@ -31,7 +31,7 @@ async fn main() {
     }
 }
 
-async fn drone() {
+async fn uav() {
     let config = UDPConfig {
         addr: "0.0.0.0:0".to_string(),                // Bind to all interfaces for receiving
         dest_addr: "192.168.0.255:14540".to_string(), // Destination address for sending
@@ -48,10 +48,7 @@ async fn drone() {
     let lora_network = HalfDuplexNetwork::new_barebone(lora_driver, lora_to_udp_tx, udp_rx);
     let lora_run_handle = lora_network.run().await;
 
-    let udp_heartbeat = tokio::task::Builder::new()
-        .name("udp heartbeat")
-        .spawn(send_heartbeat_to_network(udp_tx, UDP_DRIVER, 1000))
-        .unwrap();
+    let udp_heartbeat = tokio::spawn(send_heartbeat_to_network(udp_tx, UDP_DRIVER, 1000));
 
     // get udp_run_handle and lora_run_handle and join them
     join_all(
@@ -80,10 +77,7 @@ async fn gateway() {
     let lora_network = HalfDuplexNetwork::new_barebone(lora_driver, lora_to_udp_tx, udp_rx);
     let lora_run_handle = lora_network.run().await;
 
-    let udp_heartbeat = tokio::task::Builder::new()
-        .name("udp heartbeat")
-        .spawn(send_heartbeat_to_network(udp_tx, UDP_DRIVER, 1000))
-        .unwrap();
+    let udp_heartbeat = tokio::spawn(send_heartbeat_to_network(udp_tx, UDP_DRIVER, 1000));
 
     // get udp_run_handle and lora_run_handle and join them
     join_all(

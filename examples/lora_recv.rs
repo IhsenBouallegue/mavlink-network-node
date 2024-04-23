@@ -18,8 +18,8 @@ async fn main() {
     let _guard = init_logging(discovery_notifier);
 
     match node_type {
-        NodeType::Drone => {
-            drone().await;
+        NodeType::Uav => {
+            uav().await;
         }
         NodeType::Gateway => {
             gateway().await;
@@ -27,7 +27,7 @@ async fn main() {
     }
 }
 
-async fn drone() {
+async fn uav() {
     let driver = Arc::new(LoRaSx1262SpiDriver::new(None).await);
     let mavlink_generator = MavlinkHeaderGenerator::new();
     driver.prepare_to_send().await.unwrap();

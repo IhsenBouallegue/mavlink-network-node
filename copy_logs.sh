@@ -6,7 +6,7 @@ readonly DEST_BASE_PATH=./logs
 
 copy_logs() {
     local target_host=$1
-    local target_address=${TARGET_USER}@${target_host}.local
+    local target_address=${TARGET_USER}@${target_host}
     local dest_path=${DEST_BASE_PATH}/${target_host}
 
     echo "------COPY-------"
@@ -17,7 +17,7 @@ copy_logs() {
 
 delete_logs() {
     local target_host=$1
-    local target_address=${TARGET_USER}@${target_host}.local
+    local target_address=${TARGET_USER}@${target_host}
 
     echo "------DELETE-------"
     echo "Deleting logs directory on Raspberry Pi at ${target_host}..."
